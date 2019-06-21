@@ -7,13 +7,13 @@ import (
 
 // credentials struct to store user information
 type Credentials struct {
-	Id       int       `json:"id"`
-	Hash     string    `json:"password"`
-	Username string    `json:"username"`
-	Wins     int       `json:"wins"`
-	Draws    int       `json:"draws"`
-	Losses   int       `json:"losses"`
-	JoinDate time.Time `json:"joinDate"`
+	Id       int       
+	Hash     string    
+	Username string    
+	Wins     int       
+	Draws    int       
+	Losses   int       
+	JoinDate time.Time 
 }
 
 func (db *DB) CreateUser(username, password string) error {
