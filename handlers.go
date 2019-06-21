@@ -1,63 +1,52 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
-	"io"
+	"github.com/gorilla/mux"
+	_ "github.com/oliverpauffley/chess_ladder/models"
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-// main page handler
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World!")
+type jsonCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
-// check on health of server
-func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
+// create a new router
+func (env *Env) NewRouter() *mux.Router {
+	router := mux.NewRouter()
 
-	io.WriteString(w, `{"alive": true}`)
-}
+	// set up routes
+	router.HandleFunc("/register", env.RegisterHandler).Methods("POST")
+	router.HandleFunc("/login", env.LoginHandler).Methods("POST")
 
-// credentials struct to store user information
-type Credentials struct {
-	Password string `json:"password", db:"password"`
-	Username string `json:"username", db"username"`
+	return router
 }
 
 // register new users
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	creds := &Credentials{}
-	err := json.NewDecoder(r.Body).Decode(creds)
+func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+
+	register := &jsonCredentials{}
+	err := json.NewDecoder(r.Body).Decode(register)
 	if err != nil {
 		// there is something wrong with the json decode return error
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	//check if user currently exists?
 
-	// salt and hash the password using bcrypt. salt set to 8
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(creds.Password), 8)
+	// use create user to send request to server
+	err = env.db.CreateUser(register.Username, register.Password)
 	if err != nil {
-		// there is something wrong with the password hashing
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// insert new user into db
-	if _, err = db.Query("INSERT INTO users (name, hash) VALUES ($1, $2)", creds.Username, string(hashedPassword)); err != nil {
-		// there is an error entering into db return 500
 		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 }
 
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// decode and store post request json
-	creds := &Credentials{}
+	creds := &jsonCredentials{}
 	err := json.NewDecoder(r.Body).Decode(creds)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -65,28 +54,14 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// search db for user
-	rows := db.QueryRow("SELECT hash FROM users WHERE name=$1", creds.Username)
+	storedCreds, err := env.db.QueryByName(creds.Username)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// get stored password and compare with entered password
-	storedCreds := &Credentials{}
-	err = rows.Scan(&storedCreds.Password)
-	if err != nil {
-		// if no entry exists then deny login
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		// other errors return 500
-		fmt.Print(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		print(storedCreds)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	// compare stored password with hash
-	if err = bcrypt.CompareHashAndPassword([]byte(storedCreds.Password), []byte(creds.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(storedCreds.Hash), []byte(creds.Password)); err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}

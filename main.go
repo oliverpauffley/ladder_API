@@ -1,49 +1,28 @@
 package main
 
 import (
-	"database/sql"
+	"github.com/oliverpauffley/chess_ladder/models"
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux" // mux router for routes
-	_ "github.com/lib/pq"    // postgresql driver
+	_ "github.com/lib/pq" // postgresql driver
 )
 
-// database package level variable
-var db *sql.DB
+// env variable to store package environments variables
+type Env struct {
+	db models.Datastore
+}
+
+// share env as a package level variable
 
 func main() {
-	defer db.Close()
-	r := NewRouter()
 	// start database connection
-	initDB()
-	log.Fatal(http.ListenAndServe("localhost:8080", r))
-
-}
-
-// create a new router
-func NewRouter() *mux.Router {
-	r := mux.NewRouter()
-
-	// set up routes
-	r.HandleFunc("/", IndexHandler).Methods("GET")
-	r.HandleFunc("/healthcheck", HealthCheckHandler).Methods("GET")
-	r.HandleFunc("/register", RegisterHandler).Methods("POST")
-	r.HandleFunc("/login", LoginHandler).Methods("POST")
-
-	return r
-}
-
-// launch db
-func initDB() {
-	var err error
-	// connect to postgres db
-	db, err = sql.Open("postgres", "dbname=chess_ladder user=chess_admin sslmode=disable")
+	db, err := models.NewDB("postgres://chess_admin@localhost/chess_ladder?sslmode=disable")
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
+	env := &Env{db}
+	router := env.NewRouter()
+	log.Fatal(http.ListenAndServe("localhost:8080", router))
+
 }
