@@ -1,3 +1,3 @@
-# Chess Ladder - Web API #
+# Ladder - Web API #
 
-An application to record players, results and overall rankings for a chess ladder.
+An application to record players, results and overall rankings for a ladder system.
