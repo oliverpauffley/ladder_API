@@ -7,13 +7,14 @@ import (
 
 // credentials struct to store user information
 type Credentials struct {
-	Id       int       
-	Hash     string    
-	Username string    
-	Wins     int       
-	Draws    int       
-	Losses   int       
-	JoinDate time.Time 
+	Id       int       `db:"id"`
+	Username string    `db:"name"`
+	JoinDate time.Time `db:"join_date"`
+	Role     int       `db:"role"`
+	Wins     int       `db:"wins"`
+	Losses   int       `db:"losses"`
+	Draws    int       `db:"draws"`
+	Hash     string    `db:"hash"`
 }
 
 func (db *DB) CreateUser(username, password string) error {
@@ -33,15 +34,15 @@ func (db *DB) CreateUser(username, password string) error {
 	return nil
 }
 
-func (db *DB) QueryByName(username string) (*Credentials, error) {
-	rows := db.QueryRow("SELECT * FROM users WHERE name=$1", username)
-
+func (db *DB) QueryByName(username string) (Credentials, error) {
+	sqlStatement := "SELECT id, name, join_date, wins, losses, draws, hash, role FROM users WHERE name=$1;"
+	row := db.QueryRow(sqlStatement, username)
 	// get stored details
-	storedCreds := &Credentials{}
-	err := rows.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.JoinDate, &storedCreds.Wins,
-		&storedCreds.Losses, &storedCreds.Draws, &storedCreds.Hash)
+	var storedCreds Credentials
+	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.JoinDate, &storedCreds.Wins,
+		&storedCreds.Losses, &storedCreds.Draws, &storedCreds.Hash, &storedCreds.Role)
 	if err != nil {
-		return nil, err
+		return storedCreds, err
 	}
 
 	return storedCreds, nil

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/oliverpauffley/chess_ladder/models"
 	"net/http"
@@ -55,8 +57,14 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// search db for user
 	storedCreds, err := env.db.QueryByName(creds.Username)
+	if err == sql.ErrNoRows {
+		print("No User exists with this name")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	if err != nil {
-		print(storedCreds)
+		fmt.Print(storedCreds)
+		fmt.Print(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
