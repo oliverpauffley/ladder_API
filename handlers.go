@@ -14,6 +14,7 @@ import (
 type jsonCredentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Confirm  string `json:"confirm"`
 }
 
 // create a new router
@@ -34,6 +35,12 @@ func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(register)
 	if err != nil {
 		// there is something wrong with the json decode return error
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// validate the json credentials
+	if register.Username == "" || register.Password == "" || register.Password != register.Confirm {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
