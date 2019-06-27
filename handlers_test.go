@@ -4,72 +4,141 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/oliverpauffley/chess_ladder/models"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
-
-type mockdb struct {
-	users map[string]models.Credentials
-}
-
-func (db mockdb) CreateUser(username, password string) error {
-	var mockcredentials models.Credentials
-	mockcredentials.Username = username
-	mockcredentials.Hash = password
-	db.users[username] = mockcredentials
-	return nil
-}
-
-func (db mockdb) QueryByName(username string) (models.Credentials, error) {
-	mockcredentials := db.users[username]
-	return mockcredentials, nil
-}
 
 func TestRegisterHandler(t *testing.T) {
 	// create mock db and environment
-	mdb := mockdb{map[string]models.Credentials{}}
+	mdb := Mockdb{map[string]models.Credentials{}}
 	env := Env{db: mdb}
 
-	t.Run("returns bad request when empty json", func(t *testing.T) {
-		// create bad request json
-		jsonstr := []byte(``)
+	var tt = []struct {
+		name  string
+		input jsonCredentials
+		want  int
+	}{
+		{"returns bad request when sent empty values",
+			jsonCredentials{
+				"",
+				"",
+				""},
+			http.StatusBadRequest},
 
-		// form request and response
-		req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonstr))
+		{"returns bad request when passwords don't match",
+			jsonCredentials{"pete", "hello", "goodbye"},
+			http.StatusBadRequest},
+
+		{"accepts a good json packet",
+			jsonCredentials{"rob", "goodpassword", "goodpassword"},
+			http.StatusOK},
+	}
+
+	for _, test := range tt {
+		t.Run(test.name, func(t *testing.T) {
+			b, _ := json.Marshal(test.input)
+
+			// form request and response
+			req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(b))
+			response := httptest.NewRecorder()
+
+			handler := http.HandlerFunc(env.RegisterHandler)
+			handler.ServeHTTP(response, req)
+
+			got := response.Code
+			if test.want != got {
+				t.Errorf("Expected %v got %v", test.want, got)
+			}
+		})
+	}
+
+	t.Run("stops user registering when username already exists", func(t *testing.T) {
+
+		input1 := jsonCredentials{"ollie", "1234", "1234"}
+		input2 := jsonCredentials{"ollie", "hello", "hello"}
+
+		a, _ := json.Marshal(input1)
+		b, _ := json.Marshal(input2)
+
+		// form two requests and response
+		reqA, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(a))
+		reqB, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(b))
 		response := httptest.NewRecorder()
 
 		handler := http.HandlerFunc(env.RegisterHandler)
-		handler.ServeHTTP(response, req)
+		handler.ServeHTTP(response, reqA)
 
-		want := http.StatusBadRequest
+		want := http.StatusOK
 		got := response.Code
 		if want != got {
 			t.Errorf("Expected %v got %v", want, got)
 		}
-	})
 
-	t.Run("returns bad request when not sent correct json", func(t *testing.T) {
-		// create bad request json
+		handler.ServeHTTP(response, reqB)
 
-		jsonstr := jsonCredentials{
-			Username: "",
-			Password: "",
-			Confirm:  "",
-		}
-		b, _ := json.Marshal(jsonstr)
-
-		// form request and response
-		req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(b))
-		response := httptest.NewRecorder()
-
-		handler := http.HandlerFunc(env.RegisterHandler)
-		handler.ServeHTTP(response, req)
-
-		want := http.StatusBadRequest
-		got := response.Code
+		want = http.StatusConflict
+		got = response.Code
 		if want != got {
 			t.Errorf("Expected %v got %v", want, got)
 		}
 	})
+}
+
+func TestLoginHandler(t *testing.T) {
+	// create mock db and environment
+	users := make(map[string]models.Credentials)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
+	users["ollie"] = models.Credentials{Id: 1, Username: "ollie", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
+	mdb := Mockdb{users}
+	env := Env{db: mdb}
+
+	var tt = []struct {
+		name  string
+		input jsonCredentials
+		want  int
+	}{
+		{"allows user to login",
+			jsonCredentials{"ollie", "12345", ""},
+			http.StatusOK},
+
+		{"rejects users not in the db",
+			jsonCredentials{"Paula", "12345", ""},
+			http.StatusUnauthorized},
+	}
+
+	for _, test := range tt {
+		t.Run(test.name, func(t *testing.T) {
+			b, _ := json.Marshal(test.input)
+
+			// form request and response
+			req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(b))
+			response := httptest.NewRecorder()
+
+			handler := http.HandlerFunc(env.LoginHandler)
+			handler.ServeHTTP(response, req)
+
+			got := response.Code
+			if test.want != got {
+				t.Errorf("Expected %v got %v", test.want, got)
+			}
+		})
+	}
+}
+
+// to-do:
+//func TestAuthMiddleware(t *testing.T) {
+//
+//	t.Run("Unauthorized users are rejected", func(t *testing.T){
+//	})
+//}
+//
+// GetTestHandler returns a http.HandlerFunc for testing http middleware
+func GetTestHandler() http.HandlerFunc {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		panic("test entered test handler, this should not happen")
+	}
+	return http.HandlerFunc(fn)
 }

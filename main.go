@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gorilla/sessions"
 	"github.com/oliverpauffley/chess_ladder/models"
 	"log"
 	"net/http"
@@ -13,7 +14,11 @@ type Env struct {
 	db models.Datastore
 }
 
-// share env as a package level variable
+// gorilla sessions key set
+var (
+	key   = []byte("super-secret-key")
+	store = sessions.NewCookieStore(key)
+)
 
 func main() {
 	// start database connection

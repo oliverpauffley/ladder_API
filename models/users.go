@@ -14,7 +14,7 @@ type Credentials struct {
 	Wins     int       `db:"wins"`
 	Losses   int       `db:"losses"`
 	Draws    int       `db:"draws"`
-	Hash     string    `db:"hash"`
+	Hash     []byte    `db:"hash"`
 }
 
 func (db *DB) CreateUser(username, password string) error {
