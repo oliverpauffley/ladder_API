@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -128,17 +129,54 @@ func TestLoginHandler(t *testing.T) {
 	}
 }
 
-// to-do:
-//func TestAuthMiddleware(t *testing.T) {
-//
-//	t.Run("Unauthorized users are rejected", func(t *testing.T){
-//	})
-//}
-//
-// GetTestHandler returns a http.HandlerFunc for testing http middleware
-func GetTestHandler() http.HandlerFunc {
+func TestAuthMiddleware(t *testing.T) {
+
+	t.Run("Unauthorized users are rejected", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/register", nil)
+		response := httptest.NewRecorder()
+
+		handler := AuthMiddleware(getVoidHandler())
+		handler.ServeHTTP(response, req)
+
+		want := http.StatusForbidden
+		got := response.Code
+		if want != got {
+			t.Errorf("Expected %v got %v", want, got)
+		}
+	})
+	//
+	// 	t.Run("Authorized users are accepted", func(t *testing.T){
+	// 		req, _ := http.NewRequest(http.MethodPost, "/register", nil)
+	// 		response := httptest.NewRecorder()
+	//
+	// 		handler := AuthMiddleware(getTestHandler())
+	// 		handler.ServeHTTP(response, req)
+	//
+	// 		want := http.StatusOK
+	// 		got := response.Code
+	// 		if want != got {
+	// 			t.Errorf("Expected %v got %v", want, got)
+	// 		}
+	// 		wantString := "success!"
+	// 		gotString  := response.Body.String()
+	// 		if gotString != wantString {
+	// 			t.Errorf("Inner handler does not run, wanted %s got %s", wantString, gotString)
+	// 		}
+	// 	})
+}
+
+// getVoid Handler returns a http.HandlerFunc for testing http middleware, should never run!
+func getVoidHandler() http.HandlerFunc {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		panic("test entered test handler, this should not happen")
+	}
+	return http.HandlerFunc(fn)
+}
+
+// GetTestHandler returns a http.HandlerFunc for testing http middleware
+func getTestHandler() http.HandlerFunc {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprintf(w, "success!")
 	}
 	return http.HandlerFunc(fn)
 }
