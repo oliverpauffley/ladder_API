@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/gob"
+	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/oliverpauffley/chess_ladder/models"
 	"log"
@@ -14,11 +16,21 @@ type Env struct {
 	db models.Datastore
 }
 
-// gorilla sessions key set
-var (
-	key   = []byte("super-secret-key")
+// gorilla sessions cookie store
+var store *sessions.CookieStore
+
+// Pre-run setup
+func init() {
+	// register User struct with cookie store
+	gob.Register(User{})
+
+	// setup store with random key
+	key := securecookie.GenerateRandomKey(64)
 	store = sessions.NewCookieStore(key)
-)
+
+	// Set Cookies to last one day
+	store.Options = &sessions.Options{MaxAge: 60 * 60 * 24}
+}
 
 func main() {
 	// start database connection

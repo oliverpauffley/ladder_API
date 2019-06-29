@@ -3,19 +3,37 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	_ "github.com/oliverpauffley/chess_ladder/models"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
+// the front end should send the following to login and register
 type jsonCredentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Confirm  string `json:"confirm"`
+}
+
+// User stores session information for a cookie
+type User struct {
+	ID            int  `json:"ID"`
+	Authenticated bool `json:"authenticated"`
+}
+
+// GetUser is a helper function to return a user from the session value.
+// if no user is found an empty unauthenticated user is returned
+func GetUser(s *sessions.Session) User {
+	val := s.Values["user"]
+	var user = User{}
+	user, ok := val.(User)
+	if !ok {
+		return User{Authenticated: false}
+	}
+	return user
 }
 
 // create a new router
@@ -88,8 +106,6 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		fmt.Print(storedCreds)
-		fmt.Print(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -100,7 +116,8 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// user is ok so authenticate
-	session.Values["authenticated"] = true
+	user := User{ID: storedCreds.Id, Authenticated: true}
+	session.Values["user"] = user
 	err = session.Save(r, w)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -118,7 +135,7 @@ func (env Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// revoke user cookie
-	session.Values["authenticated"] = false
+	session.Values["user"] = User{Authenticated: false}
 	err = session.Save(r, w)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

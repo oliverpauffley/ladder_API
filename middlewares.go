@@ -12,8 +12,11 @@ func AuthMiddleware(h http.Handler) http.Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		// get the user struct from the cookie
+		user := GetUser(session)
+
 		// check for using authentication
-		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		if auth := user.Authenticated; !auth {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
