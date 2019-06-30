@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/oliverpauffley/chess_ladder/models"
 	_ "github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -25,7 +24,7 @@ func (env *Env) NewRouter() *mux.Router {
 	authRouter := router.PathPrefix("/auth").Subrouter()
 	authRouter.Use(AuthMiddleware)
 	authRouter.HandleFunc("/logout", env.LogoutHandler).Methods("GET")
-	authRouter.HandleFunc("/users/{id:?[0-9]+}", env.UserHandler).Methods("GET")
+	authRouter.HandleFunc("/users/{id:[0-9]+}", env.UserHandler).Methods("GET")
 
 	return router
 }
@@ -64,6 +63,7 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// create cookie ready to add to use
 	session, err := store.Get(r, "authentication-cookie")
 	if err != nil {
+		log.Print(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -122,10 +122,6 @@ func (env Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
-	// create empty user credentials to return on an error
-	emptyCredentials := models.CredentialsExternal{}
-	emptyUser, _ := json.Marshal(emptyCredentials)
-
 	// set http header type as json
 	w.Header().Set("Content-Type", "application/json")
 
@@ -136,7 +132,6 @@ func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write(emptyUser)
 		return
 	}
 
@@ -144,13 +139,11 @@ func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 	credentials, err := env.db.QueryById(id)
 	if err == sql.ErrNoRows {
 		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write(emptyUser)
 		return
 	}
 	if err != nil {
 		log.Print(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write(emptyUser)
 		return
 	}
 
