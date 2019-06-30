@@ -6,7 +6,7 @@ import (
 )
 
 // credentials struct to store user information
-type Credentials struct {
+type CredentialsInternal struct {
 	Id       int       `db:"id"`
 	Username string    `db:"name"`
 	JoinDate time.Time `db:"join_date"`
@@ -15,6 +15,16 @@ type Credentials struct {
 	Losses   int       `db:"losses"`
 	Draws    int       `db:"draws"`
 	Hash     []byte    `db:"hash"`
+}
+
+type CredentialsExternal struct {
+	Id       int       `db:"id"`
+	Username string    `db:"name"`
+	JoinDate time.Time `db:"join_date"`
+	Role     int       `db:"role"`
+	Wins     int       `db:"wins"`
+	Losses   int       `db:"losses"`
+	Draws    int       `db:"draws"`
 }
 
 func (db *DB) CreateUser(username, password string) error {
@@ -34,13 +44,27 @@ func (db *DB) CreateUser(username, password string) error {
 	return nil
 }
 
-func (db *DB) QueryByName(username string) (Credentials, error) {
+func (db *DB) QueryByName(username string) (CredentialsInternal, error) {
 	sqlStatement := "SELECT id, name, join_date, wins, losses, draws, hash, role FROM users WHERE name=$1;"
 	row := db.QueryRow(sqlStatement, username)
 	// get stored details
-	var storedCreds Credentials
+	var storedCreds CredentialsInternal
 	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.JoinDate, &storedCreds.Wins,
 		&storedCreds.Losses, &storedCreds.Draws, &storedCreds.Hash, &storedCreds.Role)
+	if err != nil {
+		return storedCreds, err
+	}
+
+	return storedCreds, nil
+}
+
+func (db *DB) QueryById(id int) (CredentialsExternal, error) {
+	sqlStatement := "SELECT id, name, join_date, wins, losses, draws, role FROM users WHERE id=$1;"
+	row := db.QueryRow(sqlStatement, id)
+	// get stored details
+	var storedCreds CredentialsExternal
+	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.JoinDate, &storedCreds.Wins,
+		&storedCreds.Losses, &storedCreds.Draws, &storedCreds.Role)
 	if err != nil {
 		return storedCreds, err
 	}

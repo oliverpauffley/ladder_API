@@ -8,7 +8,8 @@ import (
 // interface for all db methods for handlers to use
 type Datastore interface {
 	CreateUser(username, password string) error
-	QueryByName(username string) (Credentials, error)
+	QueryByName(username string) (CredentialsInternal, error)
+	QueryById(id int) (CredentialsExternal, error)
 }
 
 type DB struct {

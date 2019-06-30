@@ -5,36 +5,13 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/oliverpauffley/chess_ladder/models"
 	_ "github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
+	"strconv"
 )
-
-// the front end should send the following to login and register
-type jsonCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Confirm  string `json:"confirm"`
-}
-
-// User stores session information for a cookie
-type User struct {
-	ID            int  `json:"ID"`
-	Authenticated bool `json:"authenticated"`
-}
-
-// GetUser is a helper function to return a user from the session value.
-// if no user is found an empty unauthenticated user is returned
-func GetUser(s *sessions.Session) User {
-	val := s.Values["user"]
-	var user = User{}
-	user, ok := val.(User)
-	if !ok {
-		return User{Authenticated: false}
-	}
-	return user
-}
 
 // create a new router
 func (env *Env) NewRouter() *mux.Router {
@@ -48,6 +25,7 @@ func (env *Env) NewRouter() *mux.Router {
 	authRouter := router.PathPrefix("/auth").Subrouter()
 	authRouter.Use(AuthMiddleware)
 	authRouter.HandleFunc("/logout", env.LogoutHandler).Methods("GET")
+	authRouter.HandleFunc("/users/{id:?[0-9]+}", env.UserHandler).Methods("GET")
 
 	return router
 }
@@ -141,4 +119,72 @@ func (env Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+}
+
+func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
+	// create empty user credentials to return on an error
+	emptyCredentials := models.CredentialsExternal{}
+	emptyUser, _ := json.Marshal(emptyCredentials)
+
+	// set http header type as json
+	w.Header().Set("Content-Type", "application/json")
+
+	// get user id from url entered
+	vars := mux.Vars(r)
+	log.Print(vars)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		log.Print(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write(emptyUser)
+		return
+	}
+
+	// get user credentials from db and check for errors
+	credentials, err := env.db.QueryById(id)
+	if err == sql.ErrNoRows {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write(emptyUser)
+		return
+	}
+	if err != nil {
+		log.Print(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write(emptyUser)
+		return
+	}
+
+	// write credentials to json and return
+	js, _ := json.Marshal(credentials)
+	_, err = w.Write(js)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// the front end should send the following to login and register
+type jsonCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Confirm  string `json:"confirm"`
+}
+
+// User stores session information for a cookie
+type User struct {
+	ID            int  `json:"ID"`
+	Authenticated bool `json:"authenticated"`
+}
+
+// GetUser is a helper function to return a user from the session value.
+// if no user is found an empty unauthenticated user is returned
+func GetUser(s *sessions.Session) User {
+	val := s.Values["user"]
+	var user = User{}
+	user, ok := val.(User)
+	if !ok {
+		return User{Authenticated: false}
+	}
+	return user
 }

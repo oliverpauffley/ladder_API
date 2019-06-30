@@ -39,7 +39,7 @@ func main() {
 		log.Panic(err)
 	}
 	env := &Env{db}
-	router := env.NewRouter()
-	log.Fatal(http.ListenAndServe("localhost:8080", router))
+	Router := env.NewRouter()
+	log.Fatal(http.ListenAndServe("localhost:8080", Router))
 
 }
