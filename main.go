@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/gob"
-	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/oliverpauffley/chess_ladder/models"
 	"log"
@@ -25,7 +24,7 @@ func init() {
 	gob.Register(User{})
 
 	// setup store with random key
-	key := securecookie.GenerateRandomKey(64)
+	key := []byte("secret-key")
 	store = sessions.NewCookieStore(key)
 
 	// Set Cookies to last one day

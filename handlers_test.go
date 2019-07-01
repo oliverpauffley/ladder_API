@@ -160,7 +160,7 @@ func TestUserHandler(t *testing.T) {
 
 		{"sends empty user for user not in db with error",
 			4,
-			models.CredentialsExternal{},
+			nil,
 			http.StatusNotFound,
 			"application/json",
 		},
