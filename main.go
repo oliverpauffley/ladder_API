@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"github.com/gorilla/sessions"
 	"github.com/oliverpauffley/chess_ladder/models"
+	"github.com/rs/cors"
 	"log"
 	"net/http"
 
@@ -39,6 +40,16 @@ func main() {
 	}
 	env := &Env{db}
 	Router := env.NewRouter()
-	log.Fatal(http.ListenAndServe("localhost:8000", Router))
+
+	//use cors to manage cross origin requests
+	// change these options on prod
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost*"},
+		AllowCredentials: true,
+	})
+
+	handler := c.Handler(Router)
+
+	log.Fatal(http.ListenAndServe("localhost:8000", handler))
 
 }
