@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
-	"github.com/gorilla/sessions"
 	"github.com/oliverpauffley/chess_ladder/models"
 	"github.com/rs/cors"
 	"log"
@@ -16,21 +14,8 @@ type Env struct {
 	db models.Datastore
 }
 
-// gorilla sessions cookie store
-var store *sessions.CookieStore
-
-// Pre-run setup
-func init() {
-	// register User struct with cookie store
-	gob.Register(User{})
-
-	// setup store with random key
-	key := []byte("secret-key")
-	store = sessions.NewCookieStore(key)
-
-	// Set Cookies to last one day
-	store.Options = &sessions.Options{MaxAge: 60 * 60 * 24}
-}
+//JWT secret key, change on prod!
+const SECRETKEY string = "secret"
 
 func main() {
 	// start database connection
@@ -44,10 +29,10 @@ func main() {
 	//use cors to manage cross origin requests
 	// change these options on prod
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost*"},
+		AllowedOrigins:   []string{"http://127.0.0.1:8080"},
 		AllowCredentials: true,
 	})
-
+	// set cors to handle all requests
 	handler := c.Handler(Router)
 
 	log.Fatal(http.ListenAndServe("localhost:8000", handler))

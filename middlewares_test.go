@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestAuthMiddleware(t *testing.T) {
@@ -16,7 +18,7 @@ func TestAuthMiddleware(t *testing.T) {
 		handler := AuthMiddleware(getVoidHandler())
 		handler.ServeHTTP(response, req)
 
-		want := http.StatusForbidden
+		want := http.StatusUnauthorized
 		got := response.Code
 		if want != got {
 			t.Errorf("Expected %v got %v", want, got)
@@ -27,17 +29,29 @@ func TestAuthMiddleware(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPost, "/testing", nil)
 		response := httptest.NewRecorder()
 
-		// set user as authenticated
-		session, err := store.Get(req, "authentication-cookie")
-		if err != nil {
-			t.Fatal("should be no error here")
+		// get valid token
+		user := User{
+			1,
+			"ollie",
+			jwt.StandardClaims{
+				// token lasts 1 day
+				ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+				Issuer:    "ladderapp",
+			},
 		}
-		user := User{ID: 1, Authenticated: true}
-		session.Values["user"] = user
-		err = session.Save(req, response)
+
+		// create new token
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, user)
+
+		tokenString, err := token.SignedString([]byte(SECRETKEY))
 		if err != nil {
-			t.Fatal("should be no error here")
+			t.Fatalf("Should be no error here, %v", err)
 		}
+		req.AddCookie(&http.Cookie{
+			Name:    "token",
+			Value:   tokenString,
+			Expires: time.Now().Add(24 * time.Hour),
+		})
 
 		handler := AuthMiddleware(getTestHandler())
 		handler.ServeHTTP(response, req)

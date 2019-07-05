@@ -3,13 +3,14 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 	_ "github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // create a new router
@@ -60,17 +61,10 @@ func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 // Login existing users and provide them with a cookie
 func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	// create cookie ready to add to use
-	session, err := store.Get(r, "authentication-cookie")
-	if err != nil {
-		log.Print(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 
 	// decode and store post request json
 	creds := &jsonCredentials{}
-	err = json.NewDecoder(r.Body).Decode(creds)
+	err := json.NewDecoder(r.Body).Decode(creds)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -92,33 +86,42 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
+	expireTime := time.Now().Add(24 * time.Hour)
 	// user is ok so authenticate
-	user := User{ID: storedCreds.Id, Authenticated: true}
-	session.Values["user"] = user
-	err = session.Save(r, w)
+	user := User{
+		storedCreds.Id,
+		storedCreds.Username,
+		jwt.StandardClaims{
+			// token lasts 1 day
+			ExpiresAt: expireTime.Unix(),
+			Issuer:    "ladderapp",
+		},
+	}
+
+	// create new token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, user)
+
+	tokenString, err := token.SignedString([]byte(SECRETKEY))
 	if err != nil {
+		log.Print(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// set user cookie to token value
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   tokenString,
+		Expires: expireTime,
+	})
 }
 
 // Logout a logged in user
 func (env Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "authentication-cookie")
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// revoke user cookie
-	session.Values["user"] = User{Authenticated: false}
-	err = session.Save(r, w)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   " ",
+		Expires: time.Now(),
+	})
 }
 
 func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +130,6 @@ func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 
 	// get user id from url entered
 	vars := mux.Vars(r)
-	log.Print(vars)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		log.Print(err.Error())
@@ -164,20 +166,9 @@ type jsonCredentials struct {
 	Confirm  string `json:"confirm"`
 }
 
-// User stores session information for a cookie
+// Custom jwt claims struct that inherits from standard
 type User struct {
-	ID            int  `json:"ID"`
-	Authenticated bool `json:"authenticated"`
-}
-
-// GetUser is a helper function to return a user from the session value.
-// if no user is found an empty unauthenticated user is returned
-func GetUser(s *sessions.Session) User {
-	val := s.Values["user"]
-	var user = User{}
-	user, ok := val.(User)
-	if !ok {
-		return User{Authenticated: false}
-	}
-	return user
+	ID       int    `json:"ID"`
+	Username string `json:"username"`
+	jwt.StandardClaims
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
 	"github.com/oliverpauffley/chess_ladder/models"
@@ -160,7 +161,7 @@ func TestUserHandler(t *testing.T) {
 
 		{"sends empty user for user not in db with error",
 			4,
-			nil,
+			models.CredentialsExternal{},
 			http.StatusNotFound,
 			"application/json",
 		},
@@ -174,26 +175,40 @@ func TestUserHandler(t *testing.T) {
 			response := httptest.NewRecorder()
 			req = mux.SetURLVars(req, map[string]string{"id": strconv.Itoa(test.ID)})
 
-			// set user as authenticated
-			session, err := store.Get(req, "authentication-cookie")
-			if err != nil {
-				t.Fatal("should be no error here")
+			// get valid token
+			user := User{
+				1,
+				"ollie",
+				jwt.StandardClaims{
+					// token lasts 1 day
+					ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+					Issuer:    "ladderapp",
+				},
 			}
-			user := User{ID: 1, Authenticated: true}
-			session.Values["user"] = user
-			err = session.Save(req, response)
+
+			// create new token
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, user)
+
+			tokenString, err := token.SignedString([]byte(SECRETKEY))
 			if err != nil {
-				t.Fatal("should be no error here")
+				t.Fatalf("Should be no error here, %v", err)
 			}
+			req.AddCookie(&http.Cookie{
+				Name:    "token",
+				Value:   tokenString,
+				Expires: time.Now().Add(24 * time.Hour),
+			})
 
 			handler := AuthMiddleware(http.HandlerFunc(env.UserHandler))
 			handler.ServeHTTP(response, req)
 
 			// decode and store request json
 			got := models.CredentialsExternal{}
-			err = json.Unmarshal(response.Body.Bytes(), &got)
-			if err != nil {
-				t.Fatalf("Error decoding json, err %v, json body %v", err.Error(), response.Body.Bytes())
+			if response.Code != http.StatusNotFound {
+				err = json.Unmarshal(response.Body.Bytes(), &got)
+				if err != nil {
+					t.Fatalf("Error decoding json, err %v, json body %v", err.Error(), response.Body.Bytes())
+				}
 			}
 
 			// compare the response using go-cmp package as reflect.deepequal fails
