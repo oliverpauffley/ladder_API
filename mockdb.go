@@ -11,20 +11,25 @@ type Mockdb struct {
 	users map[string]models.CredentialsInternal
 }
 
-func (db Mockdb) CreateUser(username, password, email string) error {
+func (db Mockdb) CreateUser(username, email, password string) error {
 	var mockcredentials models.CredentialsInternal
 	mockcredentials.Username = username
 	mockcredentials.Hash, _ = bcrypt.GenerateFromPassword([]byte(password), 8)
+	mockcredentials.Email = email
 	db.users[username] = mockcredentials
 	return nil
 }
 
-func (db Mockdb) QueryByName(username string) (models.CredentialsInternal, error) {
-	mockcredentials, exists := db.users[username]
-	if exists == false {
-		return mockcredentials, sql.ErrNoRows
+func (db Mockdb) QueryByEmail(email string) (models.CredentialsInternal, error) {
+	for _, entry := range db.users {
+		if entry.Email == email {
+			user := db.users[entry.Username]
+			userCredentials := models.CredentialsInternal{Id: user.Id, Username: user.Username, Email: user.Email, JoinDate: user.JoinDate.Round(time.Hour),
+				Role: user.Role, Wins: user.Wins, Losses: user.Losses, Draws: user.Draws, Hash: user.Hash}
+			return userCredentials, nil
+		}
 	}
-	return mockcredentials, nil
+	return models.CredentialsInternal{}, sql.ErrNoRows
 }
 
 func (db Mockdb) QueryById(id int) (models.CredentialsExternal, error) {

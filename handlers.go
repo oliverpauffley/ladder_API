@@ -54,7 +54,7 @@ func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//check if user currently exists and check if email is already in db
-	if _, err := env.db.QueryByName(register.Username); err != sql.ErrNoRows {
+	if _, err := env.db.QueryByEmail(register.Email); err != sql.ErrNoRows {
 		log.Print("Trying to register a user that already exists")
 		w.WriteHeader(http.StatusConflict)
 		return
@@ -79,10 +79,13 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// email must be lowercase
+	creds.Email = strings.ToLower(creds.Email)
+
 	// search db for user
-	storedCreds, err := env.db.QueryByName(creds.Username)
+	storedCreds, err := env.db.QueryByEmail(creds.Email)
 	if err == sql.ErrNoRows {
-		log.Printf("name: %s", creds.Username)
+		log.Printf("name: %s", creds.Email)
 		log.Print("No User exists with this name")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -175,7 +178,7 @@ func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 
 // the front end should send the following to login and register
 type LoginCredentials struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 

@@ -29,7 +29,7 @@ type CredentialsExternal struct {
 	Draws    int       `db:"draws"`
 }
 
-func (db *DB) CreateUser(username, password, email string) error {
+func (db *DB) CreateUser(username, email, password string) error {
 	// salt and hash the password using bcrypt. salt set to 8
 	hashedPassword, err := GenerateFromPassword([]byte(password), 8)
 	if err != nil {
@@ -46,9 +46,9 @@ func (db *DB) CreateUser(username, password, email string) error {
 	return nil
 }
 
-func (db *DB) QueryByName(username string) (CredentialsInternal, error) {
-	sqlStatement := "SELECT id, name, email, join_date, wins, losses, draws, hash, role FROM users WHERE name=$1;"
-	row := db.QueryRow(sqlStatement, username)
+func (db *DB) QueryByEmail(email string) (CredentialsInternal, error) {
+	sqlStatement := "SELECT id, name, email, join_date, wins, losses, draws, hash, role FROM users WHERE email=$1;"
+	row := db.QueryRow(sqlStatement, email)
 	// get stored details
 	var storedCreds CredentialsInternal
 	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.Email, &storedCreds.JoinDate, &storedCreds.Wins,

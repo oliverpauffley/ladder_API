@@ -63,7 +63,7 @@ func TestRegisterHandler(t *testing.T) {
 		})
 	}
 
-	t.Run("stops user registering when username already exists", func(t *testing.T) {
+	t.Run("stops user registering when email already exists", func(t *testing.T) {
 
 		input1 := RegisterCredentials{"ollie", "ollie@example.com", "1234", "1234"}
 		input2 := RegisterCredentials{"ollie", "ollie@example.com", "hello", "hello"}
@@ -99,7 +99,7 @@ func TestLoginHandler(t *testing.T) {
 	// create mock db and environment
 	users := make(map[string]models.CredentialsInternal)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
-	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
+	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
 	mdb := Mockdb{users}
 	env := Env{db: mdb}
 
@@ -109,11 +109,11 @@ func TestLoginHandler(t *testing.T) {
 		want  int
 	}{
 		{"allows user to login",
-			LoginCredentials{"ollie", "12345"},
+			LoginCredentials{"ollie@example.com", "12345"},
 			http.StatusOK},
 
 		{"rejects users not in the db",
-			LoginCredentials{"Paula", "12345"},
+			LoginCredentials{"Paula@example.com", "12345"},
 			http.StatusUnauthorized},
 	}
 
@@ -140,7 +140,7 @@ func TestUserHandler(t *testing.T) {
 	// create mock db and environment
 	users := make(map[string]models.CredentialsInternal)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
-	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
+	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
 	mdb := Mockdb{users}
 	env := Env{db: mdb}
 
@@ -154,8 +154,9 @@ func TestUserHandler(t *testing.T) {
 		{"Shows stats for a user in db",
 			1,
 			models.CredentialsExternal{Id: users["ollie"].Id, Username: users["ollie"].Username,
-				JoinDate: users["ollie"].JoinDate.Round(time.Hour), Role: users["ollie"].Role, Wins: users["ollie"].Wins,
-				Losses: users["ollie"].Losses, Draws: users["ollie"].Draws},
+				Email: "ollie@example.com", JoinDate: users["ollie"].JoinDate.Round(time.Hour),
+				Role: users["ollie"].Role, Wins: users["ollie"].Wins, Losses: users["ollie"].Losses,
+				Draws: users["ollie"].Draws},
 			http.StatusOK,
 			"application/json",
 		},
