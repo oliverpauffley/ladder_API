@@ -10,20 +10,14 @@ import (
 // Authenticate using gorilla sessions. wraps around http handlers
 func AuthMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// get cookie from request
-		c, err := r.Cookie("token")
-		if err != nil {
-			if err == http.ErrNoCookie {
-				//no cookie so unauthorized
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			// other errors mean a bad request sent
-			w.WriteHeader(http.StatusBadRequest)
+		// Get jwt from request
+		tokenString := r.Header.Get("Authorization")
+
+		// If token is empty return unauthorized
+		if tokenString == "" {
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		// get Jwt string from cookie
-		tokenString := c.Value
 
 		// get user instance to store payload
 		user := &User{}
@@ -38,6 +32,7 @@ func AuthMiddleware(h http.Handler) http.Handler {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
+			log.Printf("Error parsing signature, %v", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}

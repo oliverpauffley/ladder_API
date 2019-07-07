@@ -23,11 +23,12 @@ func TestRegisterHandler(t *testing.T) {
 
 	var tt = []struct {
 		name  string
-		input jsonCredentials
+		input RegisterCredentials
 		want  int
 	}{
 		{"returns bad request when sent empty values",
-			jsonCredentials{
+			RegisterCredentials{
+				"",
 				"",
 				"",
 				""},
@@ -35,12 +36,12 @@ func TestRegisterHandler(t *testing.T) {
 		},
 
 		{"returns bad request when passwords don't match",
-			jsonCredentials{"pete", "hello", "goodbye"},
+			RegisterCredentials{"pete", "pete@example.com", "goodbye", "hello"},
 			http.StatusBadRequest,
 		},
 
 		{"accepts a good json packet",
-			jsonCredentials{"rob", "goodpassword", "goodpassword"},
+			RegisterCredentials{"rob", "rob@example.com", "goodpassword", "goodpassword"},
 			http.StatusOK},
 	}
 
@@ -64,8 +65,8 @@ func TestRegisterHandler(t *testing.T) {
 
 	t.Run("stops user registering when username already exists", func(t *testing.T) {
 
-		input1 := jsonCredentials{"ollie", "1234", "1234"}
-		input2 := jsonCredentials{"ollie", "hello", "hello"}
+		input1 := RegisterCredentials{"ollie", "ollie@example.com", "1234", "1234"}
+		input2 := RegisterCredentials{"ollie", "ollie@example.com", "hello", "hello"}
 
 		a, _ := json.Marshal(input1)
 		b, _ := json.Marshal(input2)
@@ -104,15 +105,15 @@ func TestLoginHandler(t *testing.T) {
 
 	var tt = []struct {
 		name  string
-		input jsonCredentials
+		input LoginCredentials
 		want  int
 	}{
 		{"allows user to login",
-			jsonCredentials{"ollie", "12345", ""},
+			LoginCredentials{"ollie", "12345"},
 			http.StatusOK},
 
 		{"rejects users not in the db",
-			jsonCredentials{"Paula", "12345", ""},
+			LoginCredentials{"Paula", "12345"},
 			http.StatusUnauthorized},
 	}
 
@@ -193,11 +194,9 @@ func TestUserHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Should be no error here, %v", err)
 			}
-			req.AddCookie(&http.Cookie{
-				Name:    "token",
-				Value:   tokenString,
-				Expires: time.Now().Add(24 * time.Hour),
-			})
+
+			// write token to header
+			req.Header.Set("Authorization", tokenString)
 
 			handler := AuthMiddleware(http.HandlerFunc(env.UserHandler))
 			handler.ServeHTTP(response, req)

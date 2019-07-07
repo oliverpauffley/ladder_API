@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -33,28 +34,36 @@ func (env *Env) NewRouter() *mux.Router {
 // register new users
 func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
-	register := &jsonCredentials{}
+	register := &RegisterCredentials{}
 	err := json.NewDecoder(r.Body).Decode(register)
 	if err != nil {
 		// there is something wrong with the json decode return error
+		log.Printf("There was an error with json decoding, %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	// email must be lowercase
+	register.Email = strings.ToLower(register.Email)
+
 	// validate the json credentials
 	if register.Username == "" || register.Password == "" || register.Password != register.Confirm {
+		log.Print(register)
+		log.Printf("There was a problem validating the json creds, %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	//check if user currently exists
+	//check if user currently exists and check if email is already in db
 	if _, err := env.db.QueryByName(register.Username); err != sql.ErrNoRows {
+		log.Print("Trying to register a user that already exists")
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
 
 	// use create user to send request to server
-	err = env.db.CreateUser(register.Username, register.Password)
+	err = env.db.CreateUser(register.Username, register.Email, register.Password)
 	if err != nil {
+		log.Printf("There was an error creating a user, %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -63,7 +72,7 @@ func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// decode and store post request json
-	creds := &jsonCredentials{}
+	creds := &LoginCredentials{}
 	err := json.NewDecoder(r.Body).Decode(creds)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -73,16 +82,19 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// search db for user
 	storedCreds, err := env.db.QueryByName(creds.Username)
 	if err == sql.ErrNoRows {
+		log.Printf("name: %s", creds.Username)
 		log.Print("No User exists with this name")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	if err != nil {
+		log.Print(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	// compare stored password with hash
 	if err = bcrypt.CompareHashAndPassword([]byte(storedCreds.Hash), []byte(creds.Password)); err != nil {
+		log.Print(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -109,10 +121,13 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// set user cookie to token value
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
-		Expires: expireTime,
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expireTime,
+		HttpOnly: false,
+		Secure:   true,
 	})
+	_, _ = w.Write([]byte(tokenString))
 }
 
 // Logout a logged in user
@@ -156,12 +171,17 @@ func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 // the front end should send the following to login and register
-type jsonCredentials struct {
+type LoginCredentials struct {
 	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type RegisterCredentials struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 	Confirm  string `json:"confirm"`
 }

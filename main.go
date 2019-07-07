@@ -31,6 +31,7 @@ func main() {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://127.0.0.1:8080"},
 		AllowCredentials: true,
+		AllowedHeaders:   []string{"*"},
 	})
 	// set cors to handle all requests
 	handler := c.Handler(Router)

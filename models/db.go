@@ -7,7 +7,7 @@ import (
 
 // interface for all db methods for handlers to use
 type Datastore interface {
-	CreateUser(username, password string) error
+	CreateUser(username, password, email string) error
 	QueryByName(username string) (CredentialsInternal, error)
 	QueryById(id int) (CredentialsExternal, error)
 }

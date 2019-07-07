@@ -11,7 +11,7 @@ type Mockdb struct {
 	users map[string]models.CredentialsInternal
 }
 
-func (db Mockdb) CreateUser(username, password string) error {
+func (db Mockdb) CreateUser(username, password, email string) error {
 	var mockcredentials models.CredentialsInternal
 	mockcredentials.Username = username
 	mockcredentials.Hash, _ = bcrypt.GenerateFromPassword([]byte(password), 8)
@@ -32,7 +32,7 @@ func (db Mockdb) QueryById(id int) (models.CredentialsExternal, error) {
 		if entry.Id == id {
 			print(id)
 			user := db.users[entry.Username]
-			userCredentials := models.CredentialsExternal{Id: user.Id, Username: user.Username, JoinDate: user.JoinDate.Round(time.Hour),
+			userCredentials := models.CredentialsExternal{Id: user.Id, Username: user.Username, Email: user.Email, JoinDate: user.JoinDate.Round(time.Hour),
 				Role: user.Role, Wins: user.Wins, Losses: user.Losses, Draws: user.Draws}
 			return userCredentials, nil
 		}

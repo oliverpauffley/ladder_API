@@ -47,11 +47,8 @@ func TestAuthMiddleware(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Should be no error here, %v", err)
 		}
-		req.AddCookie(&http.Cookie{
-			Name:    "token",
-			Value:   tokenString,
-			Expires: time.Now().Add(24 * time.Hour),
-		})
+
+		req.Header.Set("Authorization", tokenString)
 
 		handler := AuthMiddleware(getTestHandler())
 		handler.ServeHTTP(response, req)
