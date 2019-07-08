@@ -27,6 +27,7 @@ func (env *Env) NewRouter() *mux.Router {
 	authRouter.Use(AuthMiddleware)
 	authRouter.HandleFunc("/logout", env.LogoutHandler).Methods("GET")
 	authRouter.HandleFunc("/users/{id:[0-9]+}", env.UserHandler).Methods("GET")
+	authRouter.HandleFunc("/ladder", env.AddLadderHandler).Methods("POST")
 
 	return router
 }
@@ -142,6 +143,7 @@ func (env Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Show user information
 func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 	// set http header type as json
 	w.Header().Set("Content-Type", "application/json")
@@ -176,6 +178,29 @@ func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Add a new Ladder
+func (env Env) AddLadderHandler(w http.ResponseWriter, r *http.Request) {
+	// decode json from request
+	newLadder := &AddLadderCredentials{}
+	err := json.NewDecoder(r.Body).Decode(newLadder)
+	if err != nil {
+		log.Printf("error decoding json, %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO add validation
+	// 	- check if ladder already exists
+
+	// create ladder
+	err = env.db.AddLadder(newLadder.Name, newLadder.Method, newLadder.Owner)
+	if err != nil {
+		log.Printf("error creating new ladder, %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
 // the front end should send the following to login and register
 type LoginCredentials struct {
 	Email    string `json:"email"`
@@ -187,6 +212,12 @@ type RegisterCredentials struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Confirm  string `json:"confirm"`
+}
+
+type AddLadderCredentials struct {
+	Name   string `json:"name"`
+	Method string `json:"method"`
+	Owner  int    `json:"owner"`
 }
 
 // Custom jwt claims struct that inherits from standard

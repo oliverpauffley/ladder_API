@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/pkg/errors"
 	. "golang.org/x/crypto/bcrypt"
 	"time"
 )
@@ -72,4 +73,16 @@ func (db *DB) QueryById(id int) (CredentialsExternal, error) {
 	}
 
 	return storedCreds, nil
+}
+
+func (db *DB) DeleteUser(id int) error {
+	sqlStatement := "DELETE FROM users WHERE id = $1"
+	row, err := db.Exec(sqlStatement, id)
+	if err != nil {
+		return err
+	}
+	if num, _ := row.RowsAffected(); int(num) != 1 {
+		return errors.New("Deleted more rows than was supposed to happen")
+	}
+	return nil
 }
