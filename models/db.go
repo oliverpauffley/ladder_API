@@ -7,9 +7,14 @@ import (
 
 // interface for all db methods for handlers to use
 type Datastore interface {
+	// User methods
 	CreateUser(username, email, password string) error
 	QueryByEmail(email string) (CredentialsInternal, error)
 	QueryById(id int) (CredentialsExternal, error)
+	DeleteUser(id int) error
+
+	// Ladder methods
+	AddLadder(name, method string, owner int) error
 }
 
 type DB struct {
