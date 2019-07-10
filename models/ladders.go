@@ -13,12 +13,28 @@ type Ladder struct {
 }
 
 type LadderUser struct {
-	Id          int `database:"id"`
-	UserId      int `database:"user_id"`
-	LadderId    int `database:"ladder_id"`
-	Rank        int `database:"rank"`
-	HighestRank int `database:"highest_rank"`
-	Points      int `database:"points"`
+	Id          int `database:"id" json:"id"`
+	UserId      int `database:"user_id" json:"user_id"`
+	LadderId    int `database:"ladder_id" json:"ladder_id"`
+	Rank        int `database:"rank" json:"rank"`
+	HighestRank int `database:"highest_rank" json:"highest_rank"`
+	Points      int `database:"points" json:"points"`
+}
+
+type LadderRanks struct {
+	Name        string `database:"name" json:"name"`
+	UserId      int    `database:"user_id" json:"user_id"`
+	Rank        int    `database:"rank" json:"rank"`
+	HighestRank int    `database:"highest_rank" json:"highest_rank"`
+	Points      int    `database:"points" json:"points"`
+}
+
+type LadderInfo struct {
+	LadderId int           `json:"ladder_id"`
+	Name     string        `json:"name"`
+	Owner    int           `json:"owner"`
+	HashId   string        `json:"hash_id"`
+	Players  []LadderRanks `json:"players"`
 }
 
 type LadderMethod interface {
@@ -69,6 +85,7 @@ func (db *DB) GetLadderFromHashId(hashId string) (Ladder, error) {
 	return ladder, nil
 }
 
+// add a user to a ladder
 func (db *DB) JoinLadder(ladderId, userId int, method string) error {
 	startingPoints := 0
 	if method == "elo" {
@@ -80,6 +97,66 @@ func (db *DB) JoinLadder(ladderId, userId int, method string) error {
 		return err
 	}
 	return nil
+}
+
+// get all ladders that a user created
+func (db *DB) GetLadders(userId int) ([]LadderInfo, error) {
+	// Get all ladders that the user is in or where the user is the owner
+	sqlStatement := "SELECT id, name, hashid, owner FROM ladders WHERE owner=$1 UNION SELECT ladders.id, ladders.name," +
+		" ladders.hashid, ladders.owner FROM ladders_users join ladders ON ladders_users.ladder_id = ladders.id" +
+		" WHERE ladders_users.user_id=$1"
+	rows, err := db.Query(sqlStatement, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// start empty list for ladder information
+	var userLadders []Ladder
+
+	// scan over rows and add each ladder to the list of ladders
+	for rows.Next() {
+		var ladder Ladder
+		if err := rows.Scan(&ladder.Id, &ladder.Name, &ladder.Owner, &ladder.HashId); err != nil {
+			return nil, err
+		}
+		userLadders = append(userLadders, ladder)
+	}
+
+	// empty list to store ladder info with players attached
+	var laddersWithPlayers []LadderInfo
+
+	sqlStatement = "SELECT users.name, ladders_users.user_id, ladders_users.rank, ladders_users.highest_rank," +
+		" ladders_users.points FROM ladders_users JOIN users ON ladders_users.user_id = users.id WHERE ladders_users.ladder_id=$1"
+	// Get players for each ladder
+	for _, ladder := range userLadders {
+		playerRow, err := db.Query(sqlStatement, ladder.Id)
+		if err != nil {
+			return nil, err
+		}
+		var playerList []LadderRanks
+		// scan each player into the list
+		for playerRow.Next() {
+			var player LadderRanks
+			err = playerRow.Scan(&player.Name, &player.UserId, &player.Rank, &player.HighestRank, &player.Points)
+			if err != nil {
+				return nil, err
+			}
+			playerList = append(playerList, player)
+		}
+
+		ladderWithPlayers := LadderInfo{
+			LadderId: ladder.Id,
+			Name:     ladder.Name,
+			Owner:    ladder.Owner,
+			HashId:   ladder.HashId,
+			Players:  playerList,
+		}
+		// add list to players to ladder
+		laddersWithPlayers = append(laddersWithPlayers, ladderWithPlayers)
+	}
+
+	return laddersWithPlayers, nil
 }
 
 // TODO delete ladder

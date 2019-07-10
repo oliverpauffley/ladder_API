@@ -289,6 +289,11 @@ func TestJoinLadderHandler(t *testing.T) {
 			JoinLadderCredentials{Id: 1, HashId: "1"},
 			http.StatusOK,
 		},
+		{
+			"Stops user joining a ladder that doesnt exist",
+			JoinLadderCredentials{Id: 1, HashId: "4"},
+			http.StatusNotFound,
+		},
 	}
 
 	for _, test := range tt {
@@ -299,7 +304,7 @@ func TestJoinLadderHandler(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodPost, "/ladder/join", bytes.NewBuffer(b))
 			response := httptest.NewRecorder()
 
-			handler := http.HandlerFunc(env.AddLadderHandler)
+			handler := http.HandlerFunc(env.JoinLadderHandler)
 			handler.ServeHTTP(response, req)
 
 			got := response.Code
@@ -309,4 +314,128 @@ func TestJoinLadderHandler(t *testing.T) {
 		})
 	}
 
+}
+
+func TestGetAllLaddersHandler(t *testing.T) {
+	// create mock db and environment
+	users := make(map[string]models.CredentialsInternal)
+	ladders := make(map[int]models.Ladder)
+	laddersUsers := make(map[int]models.LadderUser)
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
+	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com",
+		JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
+
+	ladders[1] = models.Ladder{Id: 1, Name: "Robot Fight Ladder", Owner: 1, Method: "elo", HashId: "1"}
+	ladders[2] = models.Ladder{Id: 2, Name: "Chess Ladder", Owner: 1, Method: "elo", HashId: "2"}
+
+	player1 := models.LadderUser{
+		Id:          1,
+		UserId:      1,
+		LadderId:    1,
+		Rank:        10,
+		HighestRank: 12,
+		Points:      3451,
+	}
+
+	player2 := models.LadderUser{
+		Id:          2,
+		UserId:      1,
+		LadderId:    2,
+		Rank:        10,
+		HighestRank: 12,
+		Points:      3451,
+	}
+
+	player3 := models.LadderUser{
+		Id:          1,
+		UserId:      1,
+		LadderId:    1,
+		Rank:        10,
+		HighestRank: 12,
+		Points:      3451,
+	}
+
+	laddersUsers[1] = player1
+	laddersUsers[2] = player2
+	laddersUsers[3] = player3
+
+	mdb := Mockdb{users, ladders, laddersUsers}
+	env := Env{db: mdb}
+
+	var tt = []struct {
+		name    string
+		user    int
+		code    int
+		ladders []models.LadderInfo
+	}{
+		{
+			name: "Gets all ladders for a user",
+			user: 1,
+			code: http.StatusOK,
+			ladders: []models.LadderInfo{{
+				LadderId: ladders[1].Id,
+				Name:     ladders[1].Name,
+				Owner:    ladders[1].Owner,
+				HashId:   ladders[1].HashId,
+				Players: []models.LadderRanks{{
+					Name:        "ollie",
+					UserId:      player1.UserId,
+					Rank:        player1.Rank,
+					HighestRank: player1.HighestRank,
+					Points:      player1.Points,
+				},
+					{
+						Name:        "ollie",
+						UserId:      player3.UserId,
+						Rank:        player3.Rank,
+						HighestRank: player3.HighestRank,
+						Points:      player3.Points,
+					},
+				},
+			},
+				{
+					LadderId: ladders[2].Id,
+					Name:     ladders[2].Name,
+					Owner:    ladders[2].Owner,
+					HashId:   ladders[2].HashId,
+					Players: []models.LadderRanks{{
+						Name:        "ollie",
+						UserId:      player2.UserId,
+						Rank:        player2.Rank,
+						HighestRank: player2.HighestRank,
+						Points:      player2.Points,
+					}},
+				},
+			},
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.name, func(t *testing.T) {
+			// create request and response with correct url variables
+			urlString := fmt.Sprintf("auth/users/%d", test.user)
+			req, _ := http.NewRequest(http.MethodGet, urlString, nil)
+			response := httptest.NewRecorder()
+			req = mux.SetURLVars(req, map[string]string{"id": strconv.Itoa(test.user)})
+
+			handler := http.HandlerFunc(env.GetAllLaddersHandler)
+			handler.ServeHTTP(response, req)
+
+			got := response.Code
+			if test.code != got {
+				t.Errorf("Expected %v got %v", test.code, got)
+			}
+			var jsonGot []models.LadderInfo
+			jsonResp := response.Body.Bytes()
+			err := json.Unmarshal(jsonResp, &jsonGot)
+			if err != nil {
+				t.Fatalf("Error decoding json response, %v", err)
+			}
+
+			if !cmp.Equal(jsonGot, test.ladders) {
+				t.Errorf("Did not return correct ladders, got %v wanted %v", jsonGot, test.ladders)
+			}
+		})
+	}
 }

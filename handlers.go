@@ -30,6 +30,7 @@ func (env *Env) NewRouter() *mux.Router {
 	// ladder routes
 	authRouter.HandleFunc("/users/{id:[0-9]+}", env.UserHandler).Methods("GET")
 	authRouter.HandleFunc("/ladder", env.AddLadderHandler).Methods("POST")
+	authRouter.HandleFunc("/ladder/user/{id:[0-9]+}", env.GetAllLaddersHandler).Methods("GET")
 	authRouter.HandleFunc("/ladder/join", env.JoinLadderHandler).Methods("POST")
 
 	return router
@@ -148,9 +149,6 @@ func (env Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // Show user information
 func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
-	// set http header type as json
-	w.Header().Set("Content-Type", "application/json")
-
 	// get user id from url entered
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -171,9 +169,15 @@ func (env Env) UserHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// set http header type as json
+	w.Header().Set("Content-Type", "application/json")
 
 	// write credentials to json and return
-	js, _ := json.Marshal(credentials)
+	js, err := json.Marshal(credentials)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	_, err = w.Write(js)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -238,6 +242,47 @@ func (env Env) JoinLadderHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("error joining ladder, %v", err)
 		w.WriteHeader(http.StatusConflict)
+		return
+	}
+}
+
+// Get all ladders that a user is in or created
+func (env Env) GetAllLaddersHandler(w http.ResponseWriter, r *http.Request) {
+	// get user id from url entered
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		log.Print(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO Check if user is in db
+
+	// get ladders that user created
+	ladders, err := env.db.GetLadders(id)
+	if err != nil {
+		log.Printf("Error getting ladders from db, %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// convert ladders into json payload
+	payload, err := json.Marshal(ladders)
+	if err != nil {
+		log.Printf("error encoding json for sending, %v", err)
+	}
+	// set http header type as json
+	w.Header().Set("Content-Type", "application/json")
+
+	// write payload to body and return
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(payload)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }

@@ -38,7 +38,6 @@ func (db Mockdb) QueryByEmail(email string) (models.CredentialsInternal, error) 
 func (db Mockdb) QueryById(id int) (models.CredentialsExternal, error) {
 	for _, entry := range db.users {
 		if entry.Id == id {
-			print(id)
 			user := db.users[entry.Username]
 			userCredentials := models.CredentialsExternal{Id: user.Id, Username: user.Username, Email: user.Email, JoinDate: user.JoinDate.Round(time.Hour),
 				Role: user.Role, Wins: user.Wins, Losses: user.Losses, Draws: user.Draws}
@@ -95,4 +94,40 @@ func (db Mockdb) JoinLadder(ladderId, userId int, method string) error {
 	ladderUser := models.LadderUser{Id: key, LadderId: ladderId, UserId: userId, Rank: 0, HighestRank: 0, Points: 1000}
 	db.ladderUsers[key] = ladderUser
 	return nil
+}
+
+func (db Mockdb) GetLadders(userId int) ([]models.LadderInfo, error) {
+	var userLadders []models.LadderInfo
+	var laddersOwned []models.Ladder
+	for _, ladder := range db.ladders {
+		if ladder.Owner == userId {
+			laddersOwned = append(laddersOwned, ladder)
+		}
+	}
+	for _, ladder := range laddersOwned {
+
+		var playerList []models.LadderRanks
+		for _, player := range db.ladderUsers {
+			if player.LadderId == ladder.Id {
+				info, _ := db.QueryById(player.UserId)
+				playerInfo := models.LadderRanks{
+					Name:        info.Username,
+					UserId:      player.UserId,
+					Rank:        player.Rank,
+					HighestRank: player.HighestRank,
+					Points:      player.Points,
+				}
+				playerList = append(playerList, playerInfo)
+			}
+		}
+		ladderWithPlayers := models.LadderInfo{
+			LadderId: ladder.Id,
+			Name:     ladder.Name,
+			Owner:    ladder.Owner,
+			HashId:   ladder.HashId,
+			Players:  playerList,
+		}
+		userLadders = append(userLadders, ladderWithPlayers)
+	}
+	return userLadders, nil
 }
