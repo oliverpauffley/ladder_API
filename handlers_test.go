@@ -18,7 +18,7 @@ import (
 
 func TestRegisterHandler(t *testing.T) {
 	// create mock db and environment
-	mdb := Mockdb{map[string]models.CredentialsInternal{}, nil}
+	mdb := Mockdb{map[string]models.CredentialsInternal{}, nil, nil}
 	env := Env{db: mdb}
 
 	var tt = []struct {
@@ -100,7 +100,7 @@ func TestLoginHandler(t *testing.T) {
 	users := make(map[string]models.CredentialsInternal)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
 	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
-	mdb := Mockdb{users, nil}
+	mdb := Mockdb{users, nil, nil}
 	env := Env{db: mdb}
 
 	var tt = []struct {
@@ -141,7 +141,7 @@ func TestUserHandler(t *testing.T) {
 	users := make(map[string]models.CredentialsInternal)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
 	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
-	mdb := Mockdb{users, nil}
+	mdb := Mockdb{users, nil, nil}
 	env := Env{db: mdb}
 
 	var tt = []struct {
@@ -230,7 +230,7 @@ func TestAddLadderHandler(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
 	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
 	ladders[1] = models.Ladder{Id: 1, Name: "Robot Fight Ladder", Owner: 1, Method: "elo", HashId: "hash"}
-	mdb := Mockdb{users, ladders}
+	mdb := Mockdb{users, ladders, nil}
 	env := Env{db: mdb}
 
 	var tt = []struct {
@@ -262,4 +262,51 @@ func TestAddLadderHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestJoinLadderHandler(t *testing.T) {
+	// create mock db and environment
+	users := make(map[string]models.CredentialsInternal)
+	ladders := make(map[int]models.Ladder)
+	laddersUsers := make(map[int]models.LadderUser)
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
+	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com",
+		JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
+
+	ladders[1] = models.Ladder{Id: 1, Name: "Robot Fight Ladder", Owner: 1, Method: "elo", HashId: "1"}
+
+	mdb := Mockdb{users, ladders, laddersUsers}
+	env := Env{db: mdb}
+
+	var tt = []struct {
+		name  string
+		input JoinLadderCredentials
+		want  int
+	}{
+		{
+			"Allows users to join a ladder",
+			JoinLadderCredentials{Id: 1, HashId: "1"},
+			http.StatusOK,
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.name, func(t *testing.T) {
+			b, _ := json.Marshal(test.input)
+
+			// form request and response
+			req, _ := http.NewRequest(http.MethodPost, "/ladder/join", bytes.NewBuffer(b))
+			response := httptest.NewRecorder()
+
+			handler := http.HandlerFunc(env.AddLadderHandler)
+			handler.ServeHTTP(response, req)
+
+			got := response.Code
+			if test.want != got {
+				t.Errorf("Expected %v got %v", test.want, got)
+			}
+		})
+	}
+
 }

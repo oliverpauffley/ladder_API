@@ -26,8 +26,11 @@ func (env *Env) NewRouter() *mux.Router {
 	authRouter := router.PathPrefix("/auth").Subrouter()
 	authRouter.Use(AuthMiddleware)
 	authRouter.HandleFunc("/logout", env.LogoutHandler).Methods("GET")
+
+	// ladder routes
 	authRouter.HandleFunc("/users/{id:[0-9]+}", env.UserHandler).Methods("GET")
 	authRouter.HandleFunc("/ladder", env.AddLadderHandler).Methods("POST")
+	authRouter.HandleFunc("/ladder/join", env.JoinLadderHandler).Methods("POST")
 
 	return router
 }
@@ -201,28 +204,40 @@ func (env Env) AddLadderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// the front end should send the following to login and register
-type LoginCredentials struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
+// Join a ladder
+func (env Env) JoinLadderHandler(w http.ResponseWriter, r *http.Request) {
+	// decode json from request
+	joinCredentials := JoinLadderCredentials{}
+	err := json.NewDecoder(r.Body).Decode(&joinCredentials)
+	if err != nil {
+		log.Printf("Error decoding json, %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-type RegisterCredentials struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Confirm  string `json:"confirm"`
-}
+	// TODO check if user in already in ladder
+	// TODO Check if user exists
 
-type AddLadderCredentials struct {
-	Name   string `json:"name"`
-	Method string `json:"method"`
-	Owner  int    `json:"owner"`
-}
+	// get ladder details from db
+	ladder, err := env.db.GetLadderFromHashId(joinCredentials.HashId)
+	if err == sql.ErrNoRows {
+		log.Printf("Trying to join a ladder that doesn't exist!")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Error getting ladder details from db, %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// TODO get rank that should be put in first
+	//  Should the new person always be put in last?
 
-// Custom jwt claims struct that inherits from standard
-type User struct {
-	ID       int    `json:"ID"`
-	Username string `json:"username"`
-	jwt.StandardClaims
+	//join ladder
+	err = env.db.JoinLadder(ladder.Id, joinCredentials.Id, ladder.Method)
+	if err != nil {
+		log.Printf("error joining ladder, %v", err)
+		w.WriteHeader(http.StatusConflict)
+		return
+	}
 }

@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
+	"strconv"
 	"time"
 )
 
 type Mockdb struct {
-	users   map[string]models.CredentialsInternal
-	ladders map[int]models.Ladder
+	users       map[string]models.CredentialsInternal
+	ladders     map[int]models.Ladder
+	ladderUsers map[int]models.LadderUser
 }
 
 func (db Mockdb) CreateUser(username, email, password string) error {
@@ -66,5 +68,31 @@ func (db Mockdb) AddLadder(name, method string, owner int) error {
 	// add new ladder
 	newLadder := models.Ladder{Id: key, Name: name, Owner: owner, Method: method, HashId: "Ladder1"}
 	db.ladders[key] = newLadder
+	return nil
+}
+
+func (db Mockdb) GetLadderFromHashId(hashId string) (models.Ladder, error) {
+	id, err := strconv.Atoi(hashId)
+	if err != nil {
+		return models.Ladder{}, err
+	}
+	ladder, exists := db.ladders[id]
+	if !exists {
+		return models.Ladder{}, sql.ErrNoRows
+	}
+	return ladder, nil
+}
+
+func (db Mockdb) JoinLadder(ladderId, userId int, method string) error {
+	// find key vale
+	key := 0
+	for range db.ladderUsers {
+		if _, exists := db.ladders[key+1]; exists == true {
+			key++
+		}
+	}
+	// add user to ladder
+	ladderUser := models.LadderUser{Id: key, LadderId: ladderId, UserId: userId, Rank: 0, HighestRank: 0, Points: 1000}
+	db.ladderUsers[key] = ladderUser
 	return nil
 }

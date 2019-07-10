@@ -15,6 +15,8 @@ type Datastore interface {
 
 	// Ladder methods
 	AddLadder(name, method string, owner int) error
+	GetLadderFromHashId(HashId string) (Ladder, error)
+	JoinLadder(ladderId, userId int, method string) error
 }
 
 type DB struct {
