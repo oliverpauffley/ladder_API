@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	_ "github.com/lib/pq"
+	"github.com/oliverpauffley/chess_ladder/laddermethods"
 )
 
 // interface for all db methods for handlers to use
@@ -16,7 +17,7 @@ type Datastore interface {
 	// Ladder methods
 	AddLadder(name, method string, owner int) error
 	GetLadderFromHashId(HashId string) (Ladder, error)
-	JoinLadder(ladderId, userId int, method string) error
+	JoinLadder(ladderId, userId int, method laddermethods.LadderMethod) error
 	GetLadders(userId int) ([]LadderInfo, error)
 }
 

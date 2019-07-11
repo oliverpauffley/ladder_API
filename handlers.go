@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"github.com/oliverpauffley/chess_ladder/laddermethods"
 	_ "github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -234,11 +235,11 @@ func (env Env) JoinLadderHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	// TODO get rank that should be put in first
-	//  Should the new person always be put in last?
+	// From ladder as a string get the ladder method as an type
+	method := laddermethods.MethodFromName(ladder.Method)
 
 	//join ladder
-	err = env.db.JoinLadder(ladder.Id, joinCredentials.Id, ladder.Method)
+	err = env.db.JoinLadder(ladder.Id, joinCredentials.Id, method)
 	if err != nil {
 		log.Printf("error joining ladder, %v", err)
 		w.WriteHeader(http.StatusConflict)

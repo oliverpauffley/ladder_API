@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/oliverpauffley/chess_ladder/laddermethods"
 	"github.com/speps/go-hashids"
 )
 
@@ -13,20 +14,18 @@ type Ladder struct {
 }
 
 type LadderUser struct {
-	Id          int `database:"id" json:"id"`
-	UserId      int `database:"user_id" json:"user_id"`
-	LadderId    int `database:"ladder_id" json:"ladder_id"`
-	Rank        int `database:"rank" json:"rank"`
-	HighestRank int `database:"highest_rank" json:"highest_rank"`
-	Points      int `database:"points" json:"points"`
+	Id       int `database:"id" json:"id"`
+	UserId   int `database:"user_id" json:"user_id"`
+	LadderId int `database:"ladder_id" json:"ladder_id"`
+	Rank     int `database:"rank" json:"rank"`
+	Points   int `database:"points" json:"points"`
 }
 
 type LadderRanks struct {
-	Name        string `database:"name" json:"name"`
-	UserId      int    `database:"user_id" json:"user_id"`
-	Rank        int    `database:"rank" json:"rank"`
-	HighestRank int    `database:"highest_rank" json:"highest_rank"`
-	Points      int    `database:"points" json:"points"`
+	Name   string `database:"name" json:"name"`
+	UserId int    `database:"user_id" json:"user_id"`
+	Rank   int    `database:"rank" json:"rank"`
+	Points int    `database:"points" json:"points"`
 }
 
 type LadderInfo struct {
@@ -35,10 +34,6 @@ type LadderInfo struct {
 	Owner    int           `json:"owner"`
 	HashId   string        `json:"hash_id"`
 	Players  []LadderRanks `json:"players"`
-}
-
-type LadderMethod interface {
-	AdjustRank(Winner, Loser LadderUser) error
 }
 
 // add new ladder
@@ -86,13 +81,9 @@ func (db *DB) GetLadderFromHashId(hashId string) (Ladder, error) {
 }
 
 // add a user to a ladder
-func (db *DB) JoinLadder(ladderId, userId int, method string) error {
-	startingPoints := 0
-	if method == "elo" {
-		startingPoints = 1000
-	}
+func (db *DB) JoinLadder(ladderId, userId int, method laddermethods.LadderMethod) error {
 	sqlStatement := "INSERT INTO ladders_users (ladder_id, user_id, points) VALUES ($1, $2, $3)"
-	_, err := db.Exec(sqlStatement, ladderId, userId, startingPoints)
+	_, err := db.Exec(sqlStatement, ladderId, userId, method.GetStartingValues())
 	if err != nil {
 		return err
 	}
@@ -115,9 +106,10 @@ func (db *DB) GetLadders(userId int) ([]LadderInfo, error) {
 	var userLadders []Ladder
 
 	// scan over rows and add each ladder to the list of ladders
+	// TODO Deal with nil return values
 	for rows.Next() {
 		var ladder Ladder
-		if err := rows.Scan(&ladder.Id, &ladder.Name, &ladder.Owner, &ladder.HashId); err != nil {
+		if err := rows.Scan(&ladder.Id, &ladder.Name, &ladder.HashId, &ladder.Owner); err != nil {
 			return nil, err
 		}
 		userLadders = append(userLadders, ladder)
@@ -126,7 +118,7 @@ func (db *DB) GetLadders(userId int) ([]LadderInfo, error) {
 	// empty list to store ladder info with players attached
 	var laddersWithPlayers []LadderInfo
 
-	sqlStatement = "SELECT users.name, ladders_users.user_id, ladders_users.rank, ladders_users.highest_rank," +
+	sqlStatement = "SELECT users.name, ladders_users.user_id, RANK () OVER (ORDER  BY ladders_users.points) rank," +
 		" ladders_users.points FROM ladders_users JOIN users ON ladders_users.user_id = users.id WHERE ladders_users.ladder_id=$1"
 	// Get players for each ladder
 	for _, ladder := range userLadders {
@@ -138,7 +130,7 @@ func (db *DB) GetLadders(userId int) ([]LadderInfo, error) {
 		// scan each player into the list
 		for playerRow.Next() {
 			var player LadderRanks
-			err = playerRow.Scan(&player.Name, &player.UserId, &player.Rank, &player.HighestRank, &player.Points)
+			err = playerRow.Scan(&player.Name, &player.UserId, &player.Rank, &player.Points)
 			if err != nil {
 				return nil, err
 			}

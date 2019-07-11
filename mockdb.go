@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"github.com/oliverpauffley/chess_ladder/laddermethods"
 	"github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
 	"strconv"
@@ -82,7 +83,7 @@ func (db Mockdb) GetLadderFromHashId(hashId string) (models.Ladder, error) {
 	return ladder, nil
 }
 
-func (db Mockdb) JoinLadder(ladderId, userId int, method string) error {
+func (db Mockdb) JoinLadder(ladderId, userId int, method laddermethods.LadderMethod) error {
 	// find key vale
 	key := 0
 	for range db.ladderUsers {
@@ -91,7 +92,7 @@ func (db Mockdb) JoinLadder(ladderId, userId int, method string) error {
 		}
 	}
 	// add user to ladder
-	ladderUser := models.LadderUser{Id: key, LadderId: ladderId, UserId: userId, Rank: 0, HighestRank: 0, Points: 1000}
+	ladderUser := models.LadderUser{Id: key, LadderId: ladderId, UserId: userId, Rank: 0, Points: 1000}
 	db.ladderUsers[key] = ladderUser
 	return nil
 }
@@ -111,11 +112,10 @@ func (db Mockdb) GetLadders(userId int) ([]models.LadderInfo, error) {
 			if player.LadderId == ladder.Id {
 				info, _ := db.QueryById(player.UserId)
 				playerInfo := models.LadderRanks{
-					Name:        info.Username,
-					UserId:      player.UserId,
-					Rank:        player.Rank,
-					HighestRank: player.HighestRank,
-					Points:      player.Points,
+					Name:   info.Username,
+					UserId: player.UserId,
+					Rank:   player.Rank,
+					Points: player.Points,
 				}
 				playerList = append(playerList, playerInfo)
 			}

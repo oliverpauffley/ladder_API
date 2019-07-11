@@ -330,30 +330,27 @@ func TestGetAllLaddersHandler(t *testing.T) {
 	ladders[2] = models.Ladder{Id: 2, Name: "Chess Ladder", Owner: 1, Method: "elo", HashId: "2"}
 
 	player1 := models.LadderUser{
-		Id:          1,
-		UserId:      1,
-		LadderId:    1,
-		Rank:        10,
-		HighestRank: 12,
-		Points:      3451,
+		Id:       1,
+		UserId:   1,
+		LadderId: 1,
+		Rank:     10,
+		Points:   3451,
 	}
 
 	player2 := models.LadderUser{
-		Id:          2,
-		UserId:      1,
-		LadderId:    2,
-		Rank:        10,
-		HighestRank: 12,
-		Points:      3451,
+		Id:       2,
+		UserId:   1,
+		LadderId: 2,
+		Rank:     10,
+		Points:   3451,
 	}
 
 	player3 := models.LadderUser{
-		Id:          1,
-		UserId:      1,
-		LadderId:    1,
-		Rank:        10,
-		HighestRank: 12,
-		Points:      3451,
+		Id:       1,
+		UserId:   1,
+		LadderId: 1,
+		Rank:     10,
+		Points:   3451,
 	}
 
 	laddersUsers[1] = player1
@@ -379,18 +376,16 @@ func TestGetAllLaddersHandler(t *testing.T) {
 				Owner:    ladders[1].Owner,
 				HashId:   ladders[1].HashId,
 				Players: []models.LadderRanks{{
-					Name:        "ollie",
-					UserId:      player1.UserId,
-					Rank:        player1.Rank,
-					HighestRank: player1.HighestRank,
-					Points:      player1.Points,
+					Name:   "ollie",
+					UserId: player1.UserId,
+					Rank:   player1.Rank,
+					Points: player1.Points,
 				},
 					{
-						Name:        "ollie",
-						UserId:      player3.UserId,
-						Rank:        player3.Rank,
-						HighestRank: player3.HighestRank,
-						Points:      player3.Points,
+						Name:   "ollie",
+						UserId: player3.UserId,
+						Rank:   player3.Rank,
+						Points: player3.Points,
 					},
 				},
 			},
@@ -400,11 +395,10 @@ func TestGetAllLaddersHandler(t *testing.T) {
 					Owner:    ladders[2].Owner,
 					HashId:   ladders[2].HashId,
 					Players: []models.LadderRanks{{
-						Name:        "ollie",
-						UserId:      player2.UserId,
-						Rank:        player2.Rank,
-						HighestRank: player2.HighestRank,
-						Points:      player2.Points,
+						Name:   "ollie",
+						UserId: player2.UserId,
+						Rank:   player2.Rank,
+						Points: player2.Points,
 					}},
 				},
 			},
