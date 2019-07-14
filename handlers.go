@@ -6,6 +6,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/oliverpauffley/chess_ladder/laddermethods"
+	"github.com/oliverpauffley/chess_ladder/models"
 	_ "github.com/oliverpauffley/chess_ladder/models"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -14,28 +15,6 @@ import (
 	"strings"
 	"time"
 )
-
-// create a new router
-func (env *Env) NewRouter() *mux.Router {
-	router := mux.NewRouter()
-
-	// set up routes
-	router.HandleFunc("/register", env.RegisterHandler).Methods("POST")
-	router.HandleFunc("/login", env.LoginHandler).Methods("POST")
-
-	// create authenticated routes
-	authRouter := router.PathPrefix("/auth").Subrouter()
-	authRouter.Use(AuthMiddleware)
-	authRouter.HandleFunc("/logout", env.LogoutHandler).Methods("GET")
-
-	// ladder routes
-	authRouter.HandleFunc("/users/{id:[0-9]+}", env.UserHandler).Methods("GET")
-	authRouter.HandleFunc("/ladder", env.AddLadderHandler).Methods("POST")
-	authRouter.HandleFunc("/ladder/user/{id:[0-9]+}", env.GetAllLaddersHandler).Methods("GET")
-	authRouter.HandleFunc("/ladder/join", env.JoinLadderHandler).Methods("POST")
-
-	return router
-}
 
 // register new users
 func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -286,4 +265,45 @@ func (env Env) GetAllLaddersHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+}
+
+func (env Env) AddGame(w http.ResponseWriter, r *http.Request) {
+	// decode json
+	game := models.Game{}
+	err := json.NewDecoder(r.Body).Decode(&game)
+	if err != nil {
+		log.Printf("Error decoding json, %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	// get both users points from ladder
+	winnerStartingPoints, err1 := env.db.GetUserPoints(game.LadderId, game.Winner)
+	loserStartingPoints, err2 := env.db.GetUserPoints(game.LadderId, game.Loser)
+	if err1 != nil || err2 != nil {
+		log.Printf("error getting user points from db, %v, %v", err1, err2)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// get ladder method from db
+	ladderInternal, err := env.db.GetLadder(game.LadderId)
+	if err != nil {
+		log.Printf("error get ladder details from db, %v", err)
+	}
+	method := laddermethods.MethodFromName(ladderInternal.Method)
+
+	// Get points from the methods calculations
+	winnerPoints, loserPoints := method.AdjustRank(winnerStartingPoints, loserStartingPoints, game.Draw)
+
+	// update points in db
+	err1 = env.db.UpdatePoints(game.Winner, ladderInternal.Id, winnerPoints)
+	err2 = env.db.UpdatePoints(game.Loser, ladderInternal.Id, loserPoints)
+	if err1 != nil || err2 != nil {
+		log.Printf("error updating ranks, %v, %v", err1, err2)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// add game details to game table
+	err = env.db.AddGame(game)
 }
