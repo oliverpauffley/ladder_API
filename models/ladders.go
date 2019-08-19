@@ -67,6 +67,21 @@ func (db *DB) AddLadder(name, method string, owner int) error {
 	return nil
 }
 
+// get ladder from id
+func (db *DB) GetLadder(ladderId int) (Ladder, error) {
+	sqlStatement := "SELECT id, name, method, owner, hashid FROM ladders WHERE id=$1"
+	row := db.QueryRow(sqlStatement, ladderId)
+
+	// scan row into struct
+	var ladder Ladder
+	err := row.Scan(&ladder.Id, &ladder.Name, &ladder.Method, &ladder.Owner, &ladder.HashId)
+	if err != nil {
+		return Ladder{}, nil
+	}
+
+	return ladder, nil
+}
+
 // get ladder from its HashId
 func (db *DB) GetLadderFromHashId(hashId string) (Ladder, error) {
 	// find ladder from its hash
@@ -88,6 +103,20 @@ func (db *DB) JoinLadder(ladderId, userId int, method laddermethods.LadderMethod
 		return err
 	}
 	return nil
+}
+
+// get users current points from ladder
+func (db *DB) GetUserPoints(ladderId, userId int) (int, error) {
+	sqlStatement := "SELECT points FROM ladders_users WHERE ladder_id=$1 AND user_id=$2"
+	row := db.QueryRow(sqlStatement, ladderId, userId)
+
+	// scan row for points
+	var points int
+	err := row.Scan(&points)
+	if err != nil {
+		return 0, nil
+	}
+	return points, nil
 }
 
 // get all ladders that a user created
@@ -118,7 +147,7 @@ func (db *DB) GetLadders(userId int) ([]LadderInfo, error) {
 	// empty list to store ladder info with players attached
 	var laddersWithPlayers []LadderInfo
 
-	sqlStatement = "SELECT users.name, ladders_users.user_id, RANK () OVER (ORDER  BY ladders_users.points) rank," +
+	sqlStatement = "SELECT users.name, ladders_users.user_id, RANK () OVER (ORDER  BY ladders_users.points DESC) rank," +
 		" ladders_users.points FROM ladders_users JOIN users ON ladders_users.user_id = users.id WHERE ladders_users.ladder_id=$1"
 	// Get players for each ladder
 	for _, ladder := range userLadders {
@@ -149,6 +178,16 @@ func (db *DB) GetLadders(userId int) ([]LadderInfo, error) {
 	}
 
 	return laddersWithPlayers, nil
+}
+
+// update user ranks after a game
+func (db *DB) UpdatePoints(userId, ladderId, newPoints int) error {
+	sqlStatement := "UPDATE ladders_users SET points=$1 WHERE user_id=$2 AND ladder_id=$3"
+	_, err := db.Exec(sqlStatement, newPoints, userId, ladderId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // TODO delete ladder

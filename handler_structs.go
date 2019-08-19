@@ -1,6 +1,8 @@
 package main
 
-import "github.com/dgrijalva/jwt-go"
+import (
+	"github.com/dgrijalva/jwt-go"
+)
 
 // the front end should send the following to login and register
 type LoginCredentials struct {

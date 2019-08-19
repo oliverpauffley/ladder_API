@@ -267,6 +267,7 @@ func (env Env) GetAllLaddersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// add a new game
 func (env Env) AddGame(w http.ResponseWriter, r *http.Request) {
 	// decode json
 	game := models.Game{}
@@ -306,4 +307,9 @@ func (env Env) AddGame(w http.ResponseWriter, r *http.Request) {
 
 	// add game details to game table
 	err = env.db.AddGame(game)
+}
+
+// change a users password
+func (env Env) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+
 }

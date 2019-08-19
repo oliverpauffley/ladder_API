@@ -48,28 +48,37 @@ func (db *DB) CreateUser(username, email, password string) error {
 }
 
 func (db *DB) QueryByEmail(email string) (CredentialsInternal, error) {
-	sqlStatement := "SELECT id, name, email, join_date, wins, losses, draws, hash, role FROM users WHERE email=$1;"
+	sqlStatement := "(SELECT id, name, email, join_date, hash, role FROM users WHERE email=$1)"
 	row := db.QueryRow(sqlStatement, email)
 	// get stored details
 	var storedCreds CredentialsInternal
-	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.Email, &storedCreds.JoinDate, &storedCreds.Wins,
-		&storedCreds.Losses, &storedCreds.Draws, &storedCreds.Hash, &storedCreds.Role)
+	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.Email, &storedCreds.JoinDate,
+		&storedCreds.Hash, &storedCreds.Role)
 	if err != nil {
 		return storedCreds, err
 	}
-
+	// Get users stats from games table
+	storedCreds.Wins, storedCreds.Losses, storedCreds.Draws, err = db.GetResults(storedCreds.Id)
+	if err != nil {
+		return CredentialsInternal{}, nil
+	}
 	return storedCreds, nil
 }
 
 func (db *DB) QueryById(id int) (CredentialsExternal, error) {
-	sqlStatement := "SELECT id, name, email, join_date, wins, losses, draws, role FROM users WHERE id=$1;"
+	sqlStatement := "SELECT id, name, email, join_date, role FROM users WHERE id=$1;"
 	row := db.QueryRow(sqlStatement, id)
 	// get stored details
 	var storedCreds CredentialsExternal
-	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.Email, &storedCreds.JoinDate, &storedCreds.Wins,
-		&storedCreds.Losses, &storedCreds.Draws, &storedCreds.Role)
+	err := row.Scan(&storedCreds.Id, &storedCreds.Username, &storedCreds.Email, &storedCreds.JoinDate, &storedCreds.Role)
 	if err != nil {
 		return storedCreds, err
+	}
+
+	// Get users stats from games table
+	storedCreds.Wins, storedCreds.Losses, storedCreds.Draws, err = db.GetResults(id)
+	if err != nil {
+		return CredentialsExternal{}, nil
 	}
 
 	return storedCreds, nil
