@@ -2,10 +2,18 @@ version: '3'
 services:
   db:
     environment:
+<<<<<<< HEAD
       POSTGRES_DB: chess_ladder
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     image: postgres
+=======
+      POSTGRES_DB: 'chess_ladder'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'password'
+    container_name: db
+    hostname: db
+>>>>>>> master
     ports:
       - 5432:5432
   app:
@@ -15,9 +23,9 @@ services:
     depends_on:
       - db
     environment:
-      POSTGRES_DB: chess_ladder
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: 'chess_ladder'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'password'
     links:
       - db
       - front
