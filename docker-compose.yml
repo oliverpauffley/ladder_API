@@ -1,22 +1,15 @@
 version: '3'
 services:
   db:
-    build:
-      context: .
-      dockerfile: postgres.dockerfile
     environment:
-      POSTGRES_DB: 'chess_ladder'
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'password'
-    container_name: db
-    hostname: db
+      POSTGRES_DB: chess_ladder
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    image: postgres
     ports:
-      - "5432:5432"
-
+      - 5432:5432
   app:
-    build:
-      context: .
-      dockerfile: go.dockerfile
+    build: .
     ports:
       - "8000:8000"
     depends_on:
@@ -28,7 +21,6 @@ services:
     links:
       - db
       - front
-    command: bash -c 'while !</dev/tcp/db/5432; do sleep 5; done; ./chess_ladder'
 
   front:
     build:
