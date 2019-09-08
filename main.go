@@ -23,7 +23,7 @@ func main() {
 	dbUser := os.Getenv("POSTGRES_USER")
 	dbPassword := os.Getenv("POSTGRES_PASSWORD")
 
-	connStr := fmt.Sprintf("postgres://%s:%s@db:5432/?sslmode=disable",
+	connStr := fmt.Sprintf("postgres://%s:%s@db/chess_ladder?sslmode=disable",
 		dbUser, dbPassword)
 
 	// start database connection
