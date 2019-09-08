@@ -13,9 +13,10 @@ type Mockdb struct {
 	users       map[string]models.CredentialsInternal
 	ladders     map[int]models.Ladder
 	ladderUsers map[int]models.LadderUser
+	models.Datastore
 }
 
-func (db Mockdb) CreateUser(username, email, password string) error {
+func (db *Mockdb) CreateUser(username, email, password string) error {
 	var mockcredentials models.CredentialsInternal
 	mockcredentials.Username = username
 	mockcredentials.Hash, _ = bcrypt.GenerateFromPassword([]byte(password), 8)
@@ -24,7 +25,7 @@ func (db Mockdb) CreateUser(username, email, password string) error {
 	return nil
 }
 
-func (db Mockdb) QueryByEmail(email string) (models.CredentialsInternal, error) {
+func (db *Mockdb) QueryByEmail(email string) (models.CredentialsInternal, error) {
 	for _, entry := range db.users {
 		if entry.Email == email {
 			user := db.users[entry.Username]
@@ -36,7 +37,7 @@ func (db Mockdb) QueryByEmail(email string) (models.CredentialsInternal, error) 
 	return models.CredentialsInternal{}, sql.ErrNoRows
 }
 
-func (db Mockdb) QueryById(id int) (models.CredentialsExternal, error) {
+func (db *Mockdb) QueryById(id int) (models.CredentialsExternal, error) {
 	for _, entry := range db.users {
 		if entry.Id == id {
 			user := db.users[entry.Username]
@@ -48,7 +49,7 @@ func (db Mockdb) QueryById(id int) (models.CredentialsExternal, error) {
 	return models.CredentialsExternal{}, sql.ErrNoRows
 }
 
-func (db Mockdb) DeleteUser(id int) error {
+func (db *Mockdb) DeleteUser(id int) error {
 	user, err := db.QueryById(id)
 	if err != nil {
 		return err
@@ -57,7 +58,7 @@ func (db Mockdb) DeleteUser(id int) error {
 	return nil
 }
 
-func (db Mockdb) AddLadder(name, method string, owner int) error {
+func (db *Mockdb) AddLadder(name, method string, owner int) error {
 	// find max key value
 	key := 0
 	for range db.ladders {
@@ -71,7 +72,7 @@ func (db Mockdb) AddLadder(name, method string, owner int) error {
 	return nil
 }
 
-func (db Mockdb) GetLadderFromHashId(hashId string) (models.Ladder, error) {
+func (db *Mockdb) GetLadderFromHashId(hashId string) (models.Ladder, error) {
 	id, err := strconv.Atoi(hashId)
 	if err != nil {
 		return models.Ladder{}, err
@@ -83,7 +84,7 @@ func (db Mockdb) GetLadderFromHashId(hashId string) (models.Ladder, error) {
 	return ladder, nil
 }
 
-func (db Mockdb) JoinLadder(ladderId, userId int, method laddermethods.LadderMethod) error {
+func (db *Mockdb) JoinLadder(ladderId, userId int, method laddermethods.LadderMethod) error {
 	// find key vale
 	key := 0
 	for range db.ladderUsers {
@@ -97,7 +98,7 @@ func (db Mockdb) JoinLadder(ladderId, userId int, method laddermethods.LadderMet
 	return nil
 }
 
-func (db Mockdb) GetLadders(userId int) ([]models.LadderInfo, error) {
+func (db *Mockdb) GetLadders(userId int) ([]models.LadderInfo, error) {
 	var userLadders []models.LadderInfo
 	var laddersOwned []models.Ladder
 	for _, ladder := range db.ladders {

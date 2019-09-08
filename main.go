@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
+	_ "github.com/lib/pq" // postgresql driver
 	"github.com/oliverpauffley/chess_ladder/models"
 	"github.com/rs/cors"
 	"log"
 	"net/http"
-
-	_ "github.com/lib/pq" // postgresql driver
+	"os"
 )
 
 // env variable to store package environments variables
@@ -18,12 +19,20 @@ type Env struct {
 const SECRETKEY string = "secret"
 
 func main() {
+	//  load env variables and make connection string
+	dbUser := os.Getenv("POSTGRES_USER")
+	dbPassword := os.Getenv("POSTGRES_PASSWORD")
+
+	connStr := fmt.Sprintf("postgres://%s:%s@db:5432/?sslmode=disable",
+		dbUser, dbPassword)
+
 	// start database connection
-	db, err := models.NewDB("postgres://chess_admin@localhost/chess_ladder?sslmode=disable")
+	db, err := models.NewDB(connStr)
 	if err != nil {
 		log.Panic(err)
 	}
 	env := &Env{db}
+	log.Printf("Connected to db")
 	Router := env.NewRouter()
 
 	//use cors to manage cross origin requests

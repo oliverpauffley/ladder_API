@@ -18,8 +18,8 @@ import (
 
 func TestRegisterHandler(t *testing.T) {
 	// create mock db and environment
-	mdb := Mockdb{map[string]models.CredentialsInternal{}, nil, nil}
-	env := Env{db: mdb}
+	mdb := Mockdb{users: map[string]models.CredentialsInternal{}}
+	env := Env{db: &mdb}
 
 	var tt = []struct {
 		name  string
@@ -100,8 +100,8 @@ func TestLoginHandler(t *testing.T) {
 	users := make(map[string]models.CredentialsInternal)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
 	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
-	mdb := Mockdb{users, nil, nil}
-	env := Env{db: mdb}
+	mdb := Mockdb{users: users}
+	env := Env{db: &mdb}
 
 	var tt = []struct {
 		name  string
@@ -141,8 +141,8 @@ func TestUserHandler(t *testing.T) {
 	users := make(map[string]models.CredentialsInternal)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
 	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
-	mdb := Mockdb{users, nil, nil}
-	env := Env{db: mdb}
+	mdb := Mockdb{users: users}
+	env := Env{db: &mdb}
 
 	var tt = []struct {
 		name        string
@@ -230,8 +230,8 @@ func TestAddLadderHandler(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("12345"), 8)
 	users["ollie"] = models.CredentialsInternal{Id: 1, Username: "ollie", Email: "ollie@example.com", JoinDate: time.Now(), Role: 1, Wins: 0, Losses: 0, Draws: 0, Hash: hash}
 	ladders[1] = models.Ladder{Id: 1, Name: "Robot Fight Ladder", Owner: 1, Method: "elo", HashId: "hash"}
-	mdb := Mockdb{users, ladders, nil}
-	env := Env{db: mdb}
+	mdb := Mockdb{users: users, ladders: ladders}
+	env := Env{db: &mdb}
 
 	var tt = []struct {
 		name  string
@@ -276,8 +276,8 @@ func TestJoinLadderHandler(t *testing.T) {
 
 	ladders[1] = models.Ladder{Id: 1, Name: "Robot Fight Ladder", Owner: 1, Method: "elo", HashId: "1"}
 
-	mdb := Mockdb{users, ladders, laddersUsers}
-	env := Env{db: mdb}
+	mdb := Mockdb{users: users, ladders: ladders, ladderUsers: laddersUsers}
+	env := Env{db: &mdb}
 
 	var tt = []struct {
 		name  string
@@ -357,8 +357,8 @@ func TestGetAllLaddersHandler(t *testing.T) {
 	laddersUsers[2] = player2
 	laddersUsers[3] = player3
 
-	mdb := Mockdb{users, ladders, laddersUsers}
-	env := Env{db: mdb}
+	mdb := Mockdb{users: users, ladders: ladders, ladderUsers: laddersUsers}
+	env := Env{db: &mdb}
 
 	var tt = []struct {
 		name    string

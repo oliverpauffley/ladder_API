@@ -53,7 +53,7 @@ func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Login existing users and provide them with a cookie
+// Login existing users and provide them with a jwt
 func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// decode and store post request json

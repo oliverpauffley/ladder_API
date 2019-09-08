@@ -44,11 +44,11 @@ func (db *DB) AddLadder(name, method string, owner int) error {
 	if err != nil {
 		return err
 	}
-
+	// TODO: separate out
 	//generate hashid from ladder id, uses github.com/speps/go-hashids
 	hd := hashids.NewData()
 	hd.Salt = "Secret Salt"
-	hd.MinLength = 20
+	hd.MinLength = 5
 	h, err := hashids.NewWithData(hd)
 	if err != nil {
 		return err
@@ -164,6 +164,10 @@ func (db *DB) GetLadders(userId int) ([]LadderInfo, error) {
 				return nil, err
 			}
 			playerList = append(playerList, player)
+		}
+
+		if len(playerList) == 0 {
+			playerList = append(playerList, LadderRanks{})
 		}
 
 		ladderWithPlayers := LadderInfo{

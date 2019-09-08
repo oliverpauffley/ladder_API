@@ -1,0 +1,39 @@
+version: '3'
+services:
+  db:
+    build:
+      context: .
+      dockerfile: postgres.dockerfile
+    environment:
+      POSTGRES_DB: chess_ladder
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    container_name: db
+    hostname: db
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: go.dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      POSTGRES_DB: chess_ladder
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    links:
+      - db
+      - front
+    command: bash -c 'while !</dev/tcp/db/5432; do sleep 5; done; ./chess_ladder'
+
+  front:
+    build:
+      context: /home/stoker/dev/vueladder
+      dockerfile: frontend.dockerfile
+    ports:
+      - "8080:8080"
+
