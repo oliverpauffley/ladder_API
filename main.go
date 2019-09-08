@@ -10,11 +10,6 @@ import (
 	"os"
 )
 
-// env variable to store package environments variables
-type Env struct {
-	db models.Datastore
-}
-
 //JWT secret key, change on prod!
 const SECRETKEY string = "secret"
 
@@ -23,7 +18,7 @@ func main() {
 	dbUser := os.Getenv("POSTGRES_USER")
 	dbPassword := os.Getenv("POSTGRES_PASSWORD")
 
-	connStr := fmt.Sprintf("postgres://%s:%s@db/chess_ladder?sslmode=disable",
+	connStr := fmt.Sprintf("postgres://%s:%s@172.17.0.2?sslmode=disable",
 		dbUser, dbPassword)
 
 	// start database connection
@@ -32,7 +27,6 @@ func main() {
 		log.Panic(err)
 	}
 	env := &Env{db}
-	log.Printf("Connected to db")
 	Router := env.NewRouter()
 
 	//use cors to manage cross origin requests
@@ -45,6 +39,6 @@ func main() {
 	// set cors to handle all requests
 	handler := c.Handler(Router)
 
-	log.Fatal(http.ListenAndServe("localhost:8000", handler))
+	log.Fatal(http.ListenAndServe("127.0.0.1:8000", handler))
 
 }

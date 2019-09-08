@@ -15,5 +15,8 @@ func NewDB(dataSourceName string) (*DB, error) {
 	if err != nil {
 		return &DB{}, err
 	}
+	if err := db.Ping(); err != nil {
+		return &DB{}, err
+	}
 	return &DB{db}, nil
 }

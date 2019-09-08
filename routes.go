@@ -1,6 +1,14 @@
 package main
 
-import "github.com/gorilla/mux"
+import (
+	"github.com/gorilla/mux"
+	"github.com/oliverpauffley/chess_ladder/models"
+	"net/http"
+)
+
+type Env struct {
+	db models.Datastore
+}
 
 // create a new router
 func (env *Env) NewRouter() *mux.Router {
@@ -9,6 +17,7 @@ func (env *Env) NewRouter() *mux.Router {
 	// set up routes
 	router.HandleFunc("/register", env.RegisterHandler).Methods("POST")
 	router.HandleFunc("/login", env.LoginHandler).Methods("POST")
+	router.HandleFunc("/health", env.HealthCheckHandler).Methods(http.MethodGet)
 
 	// create authenticated routes
 	authRouter := router.PathPrefix("/auth").Subrouter()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
@@ -15,6 +16,14 @@ import (
 	"strings"
 	"time"
 )
+
+func (env Env) HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	message := bytes.Buffer{}
+
+	message.Write([]byte("Working!"))
+
+	_, _ = w.Write(message.Bytes())
+}
 
 // register new users
 func (env Env) RegisterHandler(w http.ResponseWriter, r *http.Request) {
