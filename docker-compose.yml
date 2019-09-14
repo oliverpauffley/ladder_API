@@ -2,9 +2,10 @@ version: '3'
 services:
   db:
     environment:
-      POSTGRES_DB: 'chess_ladder'
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'password'
+      POSTGRES_DB: chess_ladder
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    container_name: db
     image: postgres
     volumes:
       - ./sqldump:/docker-entrypoint-initdb.d
@@ -17,11 +18,11 @@ services:
     depends_on:
       - db
     environment:
-      POSTGRES_DB: 'chess_ladder'
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'password'
-      JWT_KEY: 'secret'
-      HASH_KEY: 'secret'
+      POSTGRES_DB: chess_ladder
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      JWT_KEY: secret
+      HASH_KEY: secret
     links:
       - db
       - front
