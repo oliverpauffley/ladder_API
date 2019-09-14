@@ -20,7 +20,7 @@ var config Config
 func main() {
 	//  load env variables and make connection string
 	config = getConfig()
-	connStr := fmt.Sprintf("postgres://%s:%s@db?sslmode=disable",
+	connStr := fmt.Sprintf("postgres://%s:%s@db/chess_ladder?sslmode=disable",
 		config.DbUser, config.DbPassword)
 
 	// start database connection
