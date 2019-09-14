@@ -25,6 +25,7 @@ services:
     links:
       - db
       - front
+    restart: always
 
   front:
     build:
