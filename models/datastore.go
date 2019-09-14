@@ -13,7 +13,8 @@ type Datastore interface {
 	DeleteUser(id int) error
 
 	// Ladder methods
-	AddLadder(name, method string, owner int) error
+	AddLadder(name, method string, owner int) (int, error)
+	AddHash(ladderId int, hashKey string) error
 	GetLadder(ladderId int) (Ladder, error)
 	GetLadderFromHashId(HashId string) (Ladder, error)
 	JoinLadder(ladderId, userId int, method laddermethods.LadderMethod) error

@@ -110,7 +110,7 @@ func (env Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// create new token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, user)
 
-	tokenString, err := token.SignedString([]byte(SECRETKEY))
+	tokenString, err := token.SignedString([]byte(config.JwtKey))
 	if err != nil {
 		log.Print(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -189,12 +189,19 @@ func (env Env) AddLadderHandler(w http.ResponseWriter, r *http.Request) {
 	// 	- check if ladder already exists
 
 	// create ladder
-	err = env.db.AddLadder(newLadder.Name, newLadder.Method, newLadder.Owner)
+	id, err := env.db.AddLadder(newLadder.Name, newLadder.Method, newLadder.Owner)
 	if err != nil {
 		log.Printf("error creating new ladder, %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	err = env.db.AddHash(id, config.HashKey)
+	if err != nil {
+		log.Printf("error adding hash id to ladder %d, %v", id, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 }
 
 // Join a ladder

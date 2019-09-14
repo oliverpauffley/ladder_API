@@ -10,16 +10,18 @@ import (
 	"os"
 )
 
-//JWT secret key, change on prod!
-const SECRETKEY string = "secret"
+// struct for environment variables
+type Config struct {
+	DbUser, DbPassword, JwtKey, HashKey string
+}
+
+var config Config
 
 func main() {
 	//  load env variables and make connection string
-	dbUser := os.Getenv("POSTGRES_USER")
-	dbPassword := os.Getenv("POSTGRES_PASSWORD")
-
-	connStr := fmt.Sprintf("postgres://%s:%s@172.17.0.2?sslmode=disable",
-		dbUser, dbPassword)
+	config = getConfig()
+	connStr := fmt.Sprintf("postgres://%s:%s@db?sslmode=disable",
+		config.DbUser, config.DbPassword)
 
 	// start database connection
 	db, err := models.NewDB(connStr)
@@ -30,7 +32,6 @@ func main() {
 	Router := env.NewRouter()
 
 	//use cors to manage cross origin requests
-	// change these options on prod
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://127.0.0.1:8080"},
 		AllowCredentials: true,
@@ -39,6 +40,31 @@ func main() {
 	// set cors to handle all requests
 	handler := c.Handler(Router)
 
-	log.Fatal(http.ListenAndServe("127.0.0.1:8000", handler))
+	log.Fatal(http.ListenAndServe(":8000", handler))
 
+}
+
+func getConfig() Config {
+	JwtKey, ok := os.LookupEnv("JWT_KEY")
+	if !ok {
+		log.Panic("JWT_KEY unset, please set this key before running ")
+	}
+	HashKey, ok := os.LookupEnv("HASH_KEY")
+	if !ok {
+		log.Panic("HASHKEY unset, please set this key before running ")
+	}
+	dbPassword, ok := os.LookupEnv("POSTGRES_PASSWORD")
+	if !ok {
+		log.Panic("POSTGRES_PASSWORD unset, please set this key before running ")
+	}
+	dbUser, ok := os.LookupEnv("POSTGRES_USER")
+	if !ok {
+		log.Panic("POSTGRES_USER unset, please set this key before running ")
+	}
+	return Config{
+		DbUser:     dbUser,
+		DbPassword: dbPassword,
+		JwtKey:     JwtKey,
+		HashKey:    HashKey,
+	}
 }

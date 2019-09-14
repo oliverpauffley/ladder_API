@@ -37,30 +37,32 @@ type LadderInfo struct {
 }
 
 // add new ladder
-func (db *DB) AddLadder(name, method string, owner int) error {
+func (db *DB) AddLadder(name, method string, owner int) (int, error) {
 	var id int
 	sqlStatement := "INSERT INTO ladders (name, method, owner) VALUES ($1, $2, $3) RETURNING id"
 	err := db.QueryRow(sqlStatement, name, method, owner).Scan(&id)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	// TODO: separate out
+	return id, nil
+}
+func (db *DB) AddHash(ladderId int, hashKey string) error {
 	//generate hashid from ladder id, uses github.com/speps/go-hashids
 	hd := hashids.NewData()
-	hd.Salt = "Secret Salt"
+	hd.Salt = hashKey
 	hd.MinLength = 5
 	h, err := hashids.NewWithData(hd)
 	if err != nil {
 		return err
 	}
-	hashid, err := h.Encode([]int{int(id)})
+	hashid, err := h.Encode([]int{int(ladderId)})
 	if err != nil {
 		return err
 	}
 
 	// insert hashid into db
-	sqlStatement = "UPDATE ladders SET hashid=$1 WHERE id=$2"
-	_, err = db.Exec(sqlStatement, hashid, id)
+	sqlStatement := "UPDATE ladders SET hashid=$1 WHERE id=$2"
+	_, err = db.Exec(sqlStatement, hashid, ladderId)
 	if err != nil {
 		return err
 	}
