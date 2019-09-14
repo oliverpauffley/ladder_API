@@ -24,7 +24,7 @@ func AuthMiddleware(h http.Handler) http.Handler {
 
 		// parse jwt string into user struct
 		token, err := jwt.ParseWithClaims(tokenString, user, func(token *jwt.Token) (interface{}, error) {
-			return []byte(SECRETKEY), nil
+			return []byte(config.JwtKey), nil
 		})
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {
