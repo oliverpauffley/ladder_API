@@ -11,5 +11,5 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/rs/cors v1.7.0
 	github.com/speps/go-hashids v2.0.0+incompatible
-	golang.org/x/crypto v0.0.0-20190907121410-71b5226ff739
+	golang.org/x/crypto v0.1.0
 )
